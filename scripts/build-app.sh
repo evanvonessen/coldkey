@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 swift build -c release
 BIN_DIR="$(swift build -c release --show-bin-path)"
-APP="$PWD/.build/Coldkey.app"
+APP="${1:-$PWD/.build/Coldkey.app}"
 ICONSET="$PWD/.build/Coldkey.iconset"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ICONSET"
 cp "$BIN_DIR/Coldkey" "$APP/Contents/MacOS/Coldkey"

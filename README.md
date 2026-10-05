@@ -16,6 +16,8 @@ Both hide options apply to the whole app, including all its windows. Hidden apps
 
 Requires the Swift tools included with Xcode or its Command Line Tools.
 
+For updates, pull the latest changes, then double-click **Build and Run.command** in the project folder. It builds, safely quits the previous Coldkey, and launches the new local app with your saved shortcuts. It does not pull changes or overwrite a copy in Applications. If something fails, the Terminal window stays open with the error.
+
 ```sh
 ./scripts/build-app.sh
 open .build/Coldkey.app
