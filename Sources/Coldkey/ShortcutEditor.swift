@@ -32,27 +32,34 @@ final class ShortcutRecorder: NSButton {
 
 final class ShortcutEditor: NSWindowController, NSWindowDelegate {
     private var draft: Binding
+    private let targetType = NSSegmentedControl(labels: ["Application", "Folder"], trackingMode: .selectOne, target: nil, action: nil)
     private let appButton = NSButton(title: "Choose Application…", target: nil, action: nil)
     private let recorder = ShortcutRecorder(title: "Record Shortcut", target: nil, action: nil)
     private let hide = NSButton(checkboxWithTitle: "Hide app when it is already in front", target: nil, action: nil)
     private let hideInBackground = NSButton(checkboxWithTitle: "Hide even when not frontmost", target: nil, action: nil)
+    private let closeFolder = NSButton(checkboxWithTitle: "Close matching folder window when already open", target: nil, action: nil)
+    private let folderHint = NSTextField(wrappingLabelWithString: "Closes only one matching Finder window. Other windows stay open. Finder control permission is requested when you first use this shortcut.")
     private let message = NSTextField(wrappingLabelWithString: "")
     var onSave: ((Binding) -> String?)?
     var onClose: (() -> Void)?
     init(binding: Binding?) {
         draft = binding ?? Binding(appPath: "", keyCode: 0, modifiers: 0, keyLabel: "", hideOnRepeat: false)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 410, height: 300), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 450, height: 360), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         super.init(window: window)
         window.title = binding == nil ? "Add Shortcut" : "Edit Shortcut"
         window.delegate = self
         window.isReleasedWhenClosed = false
-        appButton.target = self; appButton.action = #selector(chooseApp)
+        targetType.selectedSegment = draft.targetKind == .folder ? 1 : 0
+        targetType.target = self; targetType.action = #selector(changeTargetType)
+        appButton.target = self; appButton.action = #selector(chooseTarget)
         appButton.bezelStyle = .rounded
         recorder.bezelStyle = .rounded
         if let binding { appButton.title = binding.name; recorder.title = binding.shortcut }
         hide.state = draft.hideOnRepeat ? .on : .off
         hideInBackground.state = draft.hideWhenNotFrontmost ? .on : .off
         hideInBackground.toolTip = "Hide this app whenever it is visible. Press the shortcut again to show it."
+        closeFolder.state = draft.closeFolderOnRepeat ? .on : .off
+        folderHint.font = .systemFont(ofSize: 11); folderHint.textColor = .secondaryLabelColor
         recorder.onRecord = { [weak self] code, modifiers, label in
             guard let self else { return }
             self.draft.keyCode = code; self.draft.modifiers = modifiers; self.draft.keyLabel = label
@@ -64,28 +71,56 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
         let save = NSButton(title: "Save", target: self, action: #selector(saveBinding)); save.bezelStyle = .rounded; save.keyEquivalent = "\r"
         let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelEditing)); cancel.bezelStyle = .rounded; cancel.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [cancel, save]); buttons.orientation = .horizontal
-        let stack = NSStackView(views: [appButton, recorder, hint, hide, hideInBackground, message, buttons])
+        let stack = NSStackView(views: [targetType, appButton, recorder, hint, hide, hideInBackground, closeFolder, folderHint, message, buttons])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12
+        stack.detachesHiddenViews = true
         stack.translatesAutoresizingMaskIntoConstraints = false
         window.contentView!.addSubview(stack)
         NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 20), stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -20), stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 20)])
+        updateTargetControls()
         window.center()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    @objc private func chooseApp() {
+    private func updateTargetControls() {
+        let folder = draft.targetKind == .folder
+        hide.isHidden = folder; hideInBackground.isHidden = folder
+        closeFolder.isHidden = !folder; folderHint.isHidden = !folder
+        appButton.title = draft.appPath.isEmpty ? (folder ? "Choose Folder…" : "Choose Application…") : draft.name
+        appButton.toolTip = draft.appPath.isEmpty ? nil : draft.appPath
+    }
+    @objc private func changeTargetType() {
+        let kind: Binding.TargetKind = targetType.selectedSegment == 1 ? .folder : .application
+        guard kind != draft.targetKind else { return }
+        draft.targetKind = kind; draft.appPath = ""; draft.folderBookmark = nil
+        message.stringValue = ""
+        updateTargetControls()
+    }
+    func selectTarget(_ url: URL?) {
+        guard let url else { return }
+        do {
+            if draft.targetKind == .folder { draft = try FolderLocation.select(url, for: draft) }
+            else { draft.appPath = url.path; draft.folderBookmark = nil }
+            message.stringValue = ""
+            updateTargetControls()
+        } catch { message.stringValue = "Cannot use that folder. Choose an accessible folder and try again." }
+    }
+    @objc private func chooseTarget() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.applicationBundle]
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
+        let folder = draft.targetKind == .folder
+        if !folder { panel.allowedContentTypes = [.applicationBundle] }
+        panel.directoryURL = folder ? FileManager.default.homeDirectoryForCurrentUser : URL(fileURLWithPath: "/Applications")
+        panel.canChooseFiles = !folder; panel.canChooseDirectories = folder
+        panel.treatsFilePackagesAsDirectories = false; panel.allowsMultipleSelection = false
         panel.beginSheetModal(for: window!) { [weak self] response in
-            guard response == .OK, let url = panel.url, let self else { return }
-            self.draft.appPath = url.path; self.appButton.title = self.draft.name
+            guard response == .OK else { return }
+            self?.selectTarget(panel.url)
         }
     }
     @objc private func saveBinding() {
-        guard !draft.appPath.isEmpty, draft.modifiers != 0 else { message.stringValue = "Choose an application and record a shortcut."; return }
+        guard !draft.appPath.isEmpty, draft.modifiers != 0 else { message.stringValue = "Choose an application or folder and record a shortcut."; return }
         draft.hideOnRepeat = hide.state == .on
         draft.hideWhenNotFrontmost = hideInBackground.state == .on
+        draft.closeFolderOnRepeat = closeFolder.state == .on
         if let error = onSave?(draft) { message.stringValue = error } else { close() }
     }
     @objc private func cancelEditing() { close() }

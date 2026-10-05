@@ -50,4 +50,24 @@ final class ShortcutEditorTests: XCTestCase {
             }
         }
     }
+
+    func testFolderEditorKeepsOptionsSeparateAndCancelledSelectionUnchanged() throws {
+        _ = NSApplication.shared
+        let binding = Binding(appPath: "/tmp/Example.folder", keyCode: 2, modifiers: 256, keyLabel: "D", hideOnRepeat: true, hideWhenNotFrontmost: true, targetKind: .folder, folderBookmark: Data([7]), closeFolderOnRepeat: true)
+        let editor = ShortcutEditor(binding: binding)
+        defer { editor.close() }
+        let content = try XCTUnwrap(editor.window?.contentView)
+        content.layoutSubtreeIfNeeded()
+        XCTAssertTrue(try XCTUnwrap(button("Hide app when it is already in front", in: content)).isHidden)
+        XCTAssertTrue(try XCTUnwrap(button("Hide even when not frontmost", in: content)).isHidden)
+        let close = try XCTUnwrap(button("Close matching folder window when already open", in: content))
+        XCTAssertFalse(close.isHidden)
+        XCTAssertTrue(content.bounds.contains(content.convert(close.bounds, from: close)))
+        XCTAssertGreaterThanOrEqual(close.frame.width, close.fittingSize.width)
+        editor.selectTarget(nil)
+        var saved: Binding?
+        editor.onSave = { saved = $0; return nil }
+        try XCTUnwrap(button("Save", in: content)).performClick(nil)
+        XCTAssertEqual(saved, binding)
+    }
 }

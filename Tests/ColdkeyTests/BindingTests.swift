@@ -40,6 +40,8 @@ final class BindingTests: XCTestCase {
         XCTAssertEqual(binding.id, id)
         XCTAssertTrue(binding.hideOnRepeat)
         XCTAssertFalse(binding.hideWhenNotFrontmost)
+        XCTAssertEqual(binding.targetKind, .application)
+        XCTAssertNil(binding.folderBookmark)
     }
 
     func testBackgroundHideSavesIndependentlyOfOriginalOption() throws {

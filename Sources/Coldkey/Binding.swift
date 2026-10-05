@@ -2,6 +2,7 @@ import AppKit
 import Carbon
 
 struct Binding: Codable, Identifiable, Equatable {
+    enum TargetKind: String, Codable { case application, folder }
     var id = UUID()
     var appPath: String
     var keyCode: UInt32
@@ -9,7 +10,13 @@ struct Binding: Codable, Identifiable, Equatable {
     var keyLabel: String
     var hideOnRepeat: Bool
     var hideWhenNotFrontmost = false
-    var name: String { URL(fileURLWithPath: appPath).deletingPathExtension().lastPathComponent }
+    var targetKind: TargetKind = .application
+    var folderBookmark: Data? = nil
+    var closeFolderOnRepeat = true
+    var name: String {
+        let url = URL(fileURLWithPath: appPath)
+        return targetKind == .folder ? url.lastPathComponent : url.deletingPathExtension().lastPathComponent
+    }
     var shortcut: String {
         (modifiers & UInt32(controlKey) != 0 ? "⌃" : "") +
         (modifiers & UInt32(optionKey) != 0 ? "⌥" : "") +
@@ -23,6 +30,7 @@ struct Binding: Codable, Identifiable, Equatable {
 extension Binding {
     private enum CodingKeys: String, CodingKey {
         case id, appPath, keyCode, modifiers, keyLabel, hideOnRepeat, hideWhenNotFrontmost
+        case targetKind, folderBookmark, closeFolderOnRepeat
     }
 
     init(from decoder: Decoder) throws {
@@ -34,6 +42,9 @@ extension Binding {
         keyLabel = try values.decode(String.self, forKey: .keyLabel)
         hideOnRepeat = try values.decode(Bool.self, forKey: .hideOnRepeat)
         hideWhenNotFrontmost = try values.decodeIfPresent(Bool.self, forKey: .hideWhenNotFrontmost) ?? false
+        targetKind = try values.decodeIfPresent(TargetKind.self, forKey: .targetKind) ?? .application
+        folderBookmark = try values.decodeIfPresent(Data.self, forKey: .folderBookmark)
+        closeFolderOnRepeat = try values.decodeIfPresent(Bool.self, forKey: .closeFolderOnRepeat) ?? true
     }
 }
 

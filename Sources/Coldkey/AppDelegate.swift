@@ -4,6 +4,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let store = BindingStore()
     private let hotKeys = HotKeyManager()
+    private let folders = FolderLauncher()
+    private var folderActionInProgress = false
     private var editor: ShortcutEditor?
     private var failures: [String] = []
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -55,7 +57,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private func launch(_ id: UUID) {
         guard let binding = store.bindings.first(where: { $0.id == id }) else { return }
+        if binding.targetKind == .folder {
+            guard !folderActionInProgress else { return }
+            folderActionInProgress = true
+            FinderAutomation.checkPermission { [weak self] permission in
+                guard let self else { return }
+                do {
+                    try permission.get()
+                    defer { self.folderActionInProgress = false }
+                    // The binding may have been edited or removed while permission was checked.
+                    guard let current = self.store.bindings.first(where: { $0.id == id }), current.targetKind == .folder else { return }
+                    let updated = try self.folders.run(current)
+                    if updated != current {
+                        try self.store.save(self.store.bindings.map { $0.id == id ? updated : $0 })
+                        self.rebuildMenu()
+                    }
+                } catch FolderError.automationRequired { self.requestFinderPermission(for: id) }
+                catch FolderError.automationDenied { self.folderActionInProgress = false; self.showFinderPermissionSettings() }
+                catch { self.folderActionInProgress = false; self.showError(error.localizedDescription) }
+            }
+            return
+        }
         AppLauncher.run(binding) { [weak self] error in self?.showError(error) }
+    }
+    private func requestFinderPermission(for id: UUID) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Allow Coldkey to control Finder?"
+        alert.informativeText = "This lets your folder shortcuts open a folder or close one matching Finder window. macOS will ask for permission next."
+        alert.addButton(withTitle: "Continue…"); alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { folderActionInProgress = false; return }
+        FinderAutomation.checkPermission(askUser: true) { [weak self] result in
+            guard let self else { return }
+            self.folderActionInProgress = false
+            do { try result.get(); self.launch(id) }
+            catch { self.showError(error.localizedDescription) }
+        }
+    }
+    private func showFinderPermissionSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Finder control is not allowed"
+        alert.informativeText = FolderError.automationDenied.localizedDescription
+        alert.addButton(withTitle: "Open Settings"); alert.addButton(withTitle: "Cancel")
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
+            NSWorkspace.shared.open(url)
+        }
     }
     @objc private func launchFromMenu(_ sender: NSMenuItem) { if let id = sender.representedObject as? UUID { launch(id) } }
     @objc private func addShortcut() { openEditor(nil) }

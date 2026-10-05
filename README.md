@@ -7,10 +7,13 @@ A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later
 - Enable **Hide app when it is already in front** to toggle between showing and hiding it.
 - Or enable **Hide even when not frontmost** to hide a visible app even while another app is in front. Press again to show it. This separate option is off by default and works on its own or with the original option.
 - Launch apps from the menu, or edit/remove bindings under **Manage Shortcuts**.
+- Choose **Folder** in the editor to bind a directory. **Close matching folder window when already open** toggles one matching Finder window, even in the background; turn it off to open or focus the folder instead. If several windows show the folder, only the frontmost matching window is affected. Folder shortcuts do not hide Finder.
 
 Shortcuts are saved locally and restored on launch. Existing shortcuts pause while the editor is open so you can record them. Conflicts reported by macOS are shown instead of silently accepting a broken shortcut. System-reserved shortcuts may be intercepted by macOS; choose another combination if necessary.
 
 Both hide options apply to the whole app, including all its windows. Hidden apps are shown and activated; apps that are not running are launched. Existing shortcuts keep their previous hide setting when updating.
+
+Folder selections use saved bookmarks to follow moves and renames across restarts. If a folder is missing or inaccessible, choose it again. The first folder action explains and requests macOS permission to control Finder; you can cancel or manage it in **System Settings → Privacy & Security → Automation**. No Accessibility permission is needed. Finder exposes a window's current folder, so a folder in an inactive tab is not treated as a matching window.
 
 ## Build and run
 

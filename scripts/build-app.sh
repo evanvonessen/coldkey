@@ -26,6 +26,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
+<key>NSAppleEventsUsageDescription</key><string>Coldkey controls Finder to open your selected folder or close only a matching folder window when you press its shortcut.</string>
 </dict></plist>
 PLIST
 codesign --force --sign - "$APP"
