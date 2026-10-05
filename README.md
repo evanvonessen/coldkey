@@ -23,6 +23,8 @@ open .build/Coldkey.app
 
 Copy `.build/Coldkey.app` to Applications if desired. The build is locally ad-hoc signed; distribution signing and notarization are not configured. Open `Package.swift` in Xcode for development.
 
+The build also packages the selected liquid-glass app icon at standard and Retina sizes. The menu bar keeps its monochrome ⌘ symbol. Icon sources and provenance are in [Assets](Assets/README.md).
+
 ```sh
 swift test
 ```

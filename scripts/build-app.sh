@@ -4,8 +4,14 @@ cd "$(dirname "$0")/.."
 swift build -c release
 BIN_DIR="$(swift build -c release --show-bin-path)"
 APP="$PWD/.build/Coldkey.app"
-mkdir -p "$APP/Contents/MacOS"
+ICONSET="$PWD/.build/Coldkey.iconset"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ICONSET"
 cp "$BIN_DIR/Coldkey" "$APP/Contents/MacOS/Coldkey"
+for size in 16 32 128 256 512; do
+    sips -z "$size" "$size" Assets/coldkey-liquid-glass.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z "$((size * 2))" "$((size * 2))" Assets/coldkey-liquid-glass.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+done
+iconutil --convert icns --output "$APP/Contents/Resources/Coldkey.icns" "$ICONSET"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -13,6 +19,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>Coldkey</string>
 <key>CFBundleIdentifier</key><string>com.evanvonessen.coldkey</string>
 <key>CFBundleName</key><string>Coldkey</string>
+<key>CFBundleIconFile</key><string>Coldkey.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>CFBundleVersion</key><string>1</string>
