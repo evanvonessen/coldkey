@@ -12,7 +12,8 @@ struct Binding: Codable, Identifiable, Equatable {
     var hideWhenNotFrontmost = false
     var targetKind: TargetKind = .application
     var folderBookmark: Data? = nil
-    var closeFolderOnRepeat = true
+    var closeFolderOnRepeat = false
+    var closeFolderWhenNotFrontmost = false
     var name: String {
         let url = URL(fileURLWithPath: appPath)
         return targetKind == .folder ? url.lastPathComponent : url.deletingPathExtension().lastPathComponent
@@ -30,7 +31,7 @@ struct Binding: Codable, Identifiable, Equatable {
 extension Binding {
     private enum CodingKeys: String, CodingKey {
         case id, appPath, keyCode, modifiers, keyLabel, hideOnRepeat, hideWhenNotFrontmost
-        case targetKind, folderBookmark, closeFolderOnRepeat
+        case targetKind, folderBookmark, closeFolderOnRepeat, closeFolderWhenNotFrontmost
     }
 
     init(from decoder: Decoder) throws {
@@ -44,7 +45,14 @@ extension Binding {
         hideWhenNotFrontmost = try values.decodeIfPresent(Bool.self, forKey: .hideWhenNotFrontmost) ?? false
         targetKind = try values.decodeIfPresent(TargetKind.self, forKey: .targetKind) ?? .application
         folderBookmark = try values.decodeIfPresent(Data.self, forKey: .folderBookmark)
-        closeFolderOnRepeat = try values.decodeIfPresent(Bool.self, forKey: .closeFolderOnRepeat) ?? true
+        if values.contains(.closeFolderWhenNotFrontmost) {
+            closeFolderOnRepeat = try values.decodeIfPresent(Bool.self, forKey: .closeFolderOnRepeat) ?? false
+            closeFolderWhenNotFrontmost = try values.decode(Bool.self, forKey: .closeFolderWhenNotFrontmost)
+        } else if targetKind == .folder {
+            // The previous single folder option closed matching windows even in the background.
+            closeFolderOnRepeat = false
+            closeFolderWhenNotFrontmost = try values.decodeIfPresent(Bool.self, forKey: .closeFolderOnRepeat) ?? true
+        }
     }
 }
 

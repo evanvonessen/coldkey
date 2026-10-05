@@ -9,6 +9,7 @@ private final class MockFinder: FinderControlling {
     var error: Error?
     var actionError: Error?
     var queryCount = 0
+    var frontmostCloseRequirements: [Bool] = []
     func windows() throws -> [FinderWindow] {
         queryCount += 1
         if let error { throw error }
@@ -16,7 +17,8 @@ private final class MockFinder: FinderControlling {
     }
     func open(_ folder: URL) throws { actions.append(.open(folder)) }
     func focus(_ window: FinderWindow, folder: URL) throws { actions.append(.focus(window.id)) }
-    func close(_ window: FinderWindow, folder: URL) throws {
+    func close(_ window: FinderWindow, folder: URL, onlyIfFrontmost: Bool) throws {
+        frontmostCloseRequirements.append(onlyIfFrontmost)
         actions.append(.close(window.id))
         if let actionError { throw actionError }
     }
@@ -30,6 +32,7 @@ final class FolderLauncherTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         directory = FolderLocation.canonical(directory)
         binding = try FolderLocation.select(directory, for: Binding(appPath: "", keyCode: 2, modifiers: 256, keyLabel: "D", hideOnRepeat: false))
+        binding.closeFolderWhenNotFrontmost = true
     }
     override func tearDownWithError() throws { try? FileManager.default.removeItem(at: directory) }
 
@@ -57,6 +60,7 @@ final class FolderLauncherTests: XCTestCase {
         let finder = MockFinder()
         finder.currentWindows = [FinderWindow(id: 5, index: 3, folder: directory)]
         binding.closeFolderOnRepeat = false
+        binding.closeFolderWhenNotFrontmost = false
         binding.hideOnRepeat = true; binding.hideWhenNotFrontmost = true
         _ = try FolderLauncher(finder: finder).run(binding)
         XCTAssertEqual(finder.actions, [.focus(5)])
@@ -104,6 +108,7 @@ final class FolderLauncherTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         binding.closeFolderOnRepeat = false
+        binding.closeFolderWhenNotFrontmost = false
         try BindingStore(defaults: defaults).save([binding])
         let restored = try XCTUnwrap(BindingStore(defaults: defaults).bindings.first)
         XCTAssertEqual(restored, binding)
@@ -119,6 +124,64 @@ final class FolderLauncherTests: XCTestCase {
         let file = directory.appendingPathComponent("file")
         try Data().write(to: file)
         XCTAssertThrowsError(try FolderLocation.select(file, for: binding))
+    }
+
+    func testAllCloseOptionCombinationsForFrontAndBackgroundWindowsAfterReload() throws {
+        for first in [false, true] {
+            for second in [false, true] {
+                binding.closeFolderOnRepeat = first
+                binding.closeFolderWhenNotFrontmost = second
+                let restored = try JSONDecoder().decode(Binding.self, from: JSONEncoder().encode(binding))
+                // A foreground folder, a folder behind another app, and one behind another Finder window.
+                for (isFrontmost, index) in [(true, 1), (false, 1), (false, 2)] {
+                    let finder = MockFinder()
+                    finder.currentWindows = [FinderWindow(id: 4, index: index, folder: directory, isFrontmost: isFrontmost)]
+                    if index == 2 {
+                        finder.currentWindows.append(FinderWindow(id: 9, index: 1, folder: directory.deletingLastPathComponent(), isFrontmost: true))
+                    }
+                    _ = try FolderLauncher(finder: finder).run(restored)
+                    let closes = second || (first && isFrontmost)
+                    XCTAssertEqual(finder.actions, closes ? [.close(4)] : [.focus(4)], "first=\(first), second=\(second), front=\(isFrontmost), index=\(index)")
+                    XCTAssertEqual(finder.frontmostCloseRequirements, closes ? [!second] : [])
+                }
+            }
+        }
+    }
+
+    func testEveryOptionCombinationOpensWhenNoMatchingWindowExists() throws {
+        for first in [false, true] {
+            for second in [false, true] {
+                binding.closeFolderOnRepeat = first; binding.closeFolderWhenNotFrontmost = second
+                let finder = MockFinder()
+                finder.currentWindows = [FinderWindow(id: 9, index: 1, folder: directory.deletingLastPathComponent(), isFrontmost: true)]
+                _ = try FolderLauncher(finder: finder).run(binding)
+                XCTAssertEqual(finder.actions, [.open(directory)])
+                XCTAssertTrue(finder.frontmostCloseRequirements.isEmpty)
+            }
+        }
+    }
+
+    func testFrontOnlyRaisesFrontmostMatchingDuplicateBehindAnotherFolder() throws {
+        binding.closeFolderOnRepeat = true; binding.closeFolderWhenNotFrontmost = false
+        let finder = MockFinder()
+        finder.currentWindows = [FinderWindow(id: 1, index: 1, folder: directory.deletingLastPathComponent(), isFrontmost: true), FinderWindow(id: 2, index: 3, folder: directory), FinderWindow(id: 3, index: 2, folder: directory)]
+        _ = try FolderLauncher(finder: finder).run(binding)
+        XCTAssertEqual(finder.actions, [.focus(3)])
+    }
+
+    func testNewFolderDefaultsToOpenOnly() throws {
+        let fresh = try FolderLocation.select(directory, for: Binding(appPath: "", keyCode: 2, modifiers: 256, keyLabel: "D", hideOnRepeat: false))
+        XCTAssertFalse(fresh.closeFolderOnRepeat)
+        XCTAssertFalse(fresh.closeFolderWhenNotFrontmost)
+    }
+
+    func testConfirmedFrontmostMatchTakesPriorityOverOtherMatchingWindows() throws {
+        binding.closeFolderOnRepeat = true; binding.closeFolderWhenNotFrontmost = false
+        let finder = MockFinder()
+        finder.currentWindows = [FinderWindow(id: 2, index: 1, folder: directory), FinderWindow(id: 3, index: 2, folder: directory, isFrontmost: true)]
+        _ = try FolderLauncher(finder: finder).run(binding)
+        XCTAssertEqual(finder.actions, [.close(3)])
+        XCTAssertEqual(finder.frontmostCloseRequirements, [true])
     }
 
     @MainActor

@@ -44,17 +44,20 @@ final class FinderAutomation: FinderControlling {
         guard result.descriptorType == typeAEList else { throw FolderError.finderFailure("Unexpected window list. Try again.") }
         return try (0..<result.numberOfItems).map { offset in
             guard let item = result.atIndex(offset + 1), let id = item.atIndex(1),
-                  let index = item.atIndex(2), let path = item.atIndex(3)?.stringValue,
+                  let index = item.atIndex(2), let path = item.atIndex(3)?.stringValue, let isFrontmost = item.atIndex(4),
                   id.int32Value > 0, index.int32Value > 0, path.hasPrefix("/") else {
                 throw FolderError.finderFailure("A Finder window could not be identified safely. Try again.")
             }
-            return FinderWindow(id: id.int32Value, index: Int(index.int32Value), folder: URL(fileURLWithPath: path))
+            return FinderWindow(id: id.int32Value, index: Int(index.int32Value), folder: URL(fileURLWithPath: path), isFrontmost: isFrontmost.booleanValue)
         }
     }
 
     func open(_ folder: URL) throws { _ = try call("openfolder", arguments: [.init(string: folder.path)]) }
     func focus(_ window: FinderWindow, folder: URL) throws { try act("focusfolder", window: window, folder: folder) }
-    func close(_ window: FinderWindow, folder: URL) throws { try act("closefolder", window: window, folder: folder) }
+    func close(_ window: FinderWindow, folder: URL, onlyIfFrontmost: Bool) throws {
+        let result = try call("closefolder", arguments: [.init(int32: window.id), .init(string: folder.path), .init(boolean: onlyIfFrontmost)])
+        guard result.booleanValue else { throw FolderError.windowChanged }
+    }
 
     private func act(_ handler: String, window: FinderWindow, folder: URL) throws {
         let result = try call(handler, arguments: [.init(int32: window.id), .init(string: folder.path)])
@@ -70,7 +73,10 @@ final class FinderAutomation: FinderControlling {
                 set found to {}
                 repeat with w in (get Finder windows)
                     try
-                        if closeable of w then set end of found to {id of w, index of w, POSIX path of (target of w as alias)}
+                        if closeable of w then
+                            set isWindowFront to my isfrontwindow(id of w)
+                            set end of found to {id of w, index of w, POSIX path of (target of w as alias), isWindowFront}
+                        end if
                     on error messageText number errorCode
                         if errorCode is -1743 then error messageText number errorCode
                     end try
@@ -79,6 +85,17 @@ final class FinderAutomation: FinderControlling {
             end tell
         end timeout
     end listwindows
+
+    on isfrontwindow(windowID)
+        tell application id "com.apple.finder"
+            if not frontmost then return false
+            try
+                return (id of front window is windowID) and not (collapsed of Finder window id windowID)
+            on error
+                return false
+            end try
+        end tell
+    end isfrontwindow
 
     on openfolder(folderPath)
         set desiredFolder to (POSIX file folderPath) as alias
@@ -105,13 +122,20 @@ final class FinderAutomation: FinderControlling {
         end timeout
     end focusfolder
 
-    on closefolder(windowID, folderPath)
+    on closefolder(windowID, folderPath, onlyIfFrontmost)
         set desiredFolder to (POSIX file folderPath) as alias
         with timeout of 5 seconds
             tell application id "com.apple.finder"
                 if not (exists Finder window id windowID) then return false
                 set w to Finder window id windowID
                 if (target of w as alias) is not desiredFolder then return false
+                -- Recheck focus at action time. A backgrounded window should be raised, not closed.
+                if onlyIfFrontmost and not (my isfrontwindow(windowID)) then
+                    set collapsed of w to false
+                    set index of w to 1
+                    activate
+                    return true
+                end if
                 close w
                 return true
             end tell

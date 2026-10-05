@@ -60,7 +60,7 @@ final class ShortcutEditorTests: XCTestCase {
         content.layoutSubtreeIfNeeded()
         XCTAssertTrue(try XCTUnwrap(button("Hide app when it is already in front", in: content)).isHidden)
         XCTAssertTrue(try XCTUnwrap(button("Hide even when not frontmost", in: content)).isHidden)
-        let close = try XCTUnwrap(button("Close matching folder window when already open", in: content))
+        let close = try XCTUnwrap(button("Close folder window when it is already in front", in: content))
         XCTAssertFalse(close.isHidden)
         XCTAssertTrue(content.bounds.contains(content.convert(close.bounds, from: close)))
         XCTAssertGreaterThanOrEqual(close.frame.width, close.fittingSize.width)
@@ -69,5 +69,36 @@ final class ShortcutEditorTests: XCTestCase {
         editor.onSave = { saved = $0; return nil }
         try XCTUnwrap(button("Save", in: content)).performClick(nil)
         XCTAssertEqual(saved, binding)
+    }
+
+    func testFolderEditorRestoresAndSavesBothOptionsIndependently() throws {
+        _ = NSApplication.shared
+        for firstOption in [false, true] {
+            for secondOption in [false, true] {
+                let binding = Binding(appPath: "/tmp/Example.folder", keyCode: 2, modifiers: 256, keyLabel: "D", hideOnRepeat: true, hideWhenNotFrontmost: true, targetKind: .folder, closeFolderOnRepeat: firstOption, closeFolderWhenNotFrontmost: secondOption)
+                let editor = ShortcutEditor(binding: binding)
+                defer { editor.close() }
+                let content = try XCTUnwrap(editor.window?.contentView)
+                content.layoutSubtreeIfNeeded()
+                let first = try XCTUnwrap(button("Close folder window when it is already in front", in: content))
+                let second = try XCTUnwrap(button("Close even when not frontmost", in: content))
+                for control in [first, second, try XCTUnwrap(button("Save", in: content))] {
+                    XCTAssertFalse(control.isHidden)
+                    XCTAssertTrue(content.bounds.contains(content.convert(control.bounds, from: control)))
+                    XCTAssertGreaterThanOrEqual(control.frame.width, control.fittingSize.width)
+                }
+                XCTAssertEqual(first.state, firstOption ? .on : .off)
+                XCTAssertEqual(second.state, secondOption ? .on : .off)
+                first.performClick(nil); second.performClick(nil)
+                var saved: Binding?
+                editor.onSave = { saved = $0; return nil }
+                try XCTUnwrap(button("Save", in: content)).performClick(nil)
+                let result = try XCTUnwrap(saved)
+                XCTAssertEqual(result.closeFolderOnRepeat, !firstOption)
+                XCTAssertEqual(result.closeFolderWhenNotFrontmost, !secondOption)
+                XCTAssertEqual(result.hideOnRepeat, binding.hideOnRepeat)
+                XCTAssertEqual(result.hideWhenNotFrontmost, binding.hideWhenNotFrontmost)
+            }
+        }
     }
 }

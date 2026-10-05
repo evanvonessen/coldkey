@@ -37,14 +37,15 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
     private let recorder = ShortcutRecorder(title: "Record Shortcut", target: nil, action: nil)
     private let hide = NSButton(checkboxWithTitle: "Hide app when it is already in front", target: nil, action: nil)
     private let hideInBackground = NSButton(checkboxWithTitle: "Hide even when not frontmost", target: nil, action: nil)
-    private let closeFolder = NSButton(checkboxWithTitle: "Close matching folder window when already open", target: nil, action: nil)
+    private let closeFolder = NSButton(checkboxWithTitle: "Close folder window when it is already in front", target: nil, action: nil)
+    private let closeFolderInBackground = NSButton(checkboxWithTitle: "Close even when not frontmost", target: nil, action: nil)
     private let folderHint = NSTextField(wrappingLabelWithString: "Closes only one matching Finder window. Other windows stay open. Finder control permission is requested when you first use this shortcut.")
     private let message = NSTextField(wrappingLabelWithString: "")
     var onSave: ((Binding) -> String?)?
     var onClose: (() -> Void)?
     init(binding: Binding?) {
         draft = binding ?? Binding(appPath: "", keyCode: 0, modifiers: 0, keyLabel: "", hideOnRepeat: false)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 450, height: 360), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 450, height: 390), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         super.init(window: window)
         window.title = binding == nil ? "Add Shortcut" : "Edit Shortcut"
         window.delegate = self
@@ -59,6 +60,9 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
         hideInBackground.state = draft.hideWhenNotFrontmost ? .on : .off
         hideInBackground.toolTip = "Hide this app whenever it is visible. Press the shortcut again to show it."
         closeFolder.state = draft.closeFolderOnRepeat ? .on : .off
+        closeFolder.toolTip = "Close only when this folder's window is the frontmost Finder window and Finder is the active app. Otherwise, bring it forward."
+        closeFolderInBackground.state = draft.closeFolderWhenNotFrontmost ? .on : .off
+        closeFolderInBackground.toolTip = "Close one matching folder window even when another app or Finder window is in front."
         folderHint.font = .systemFont(ofSize: 11); folderHint.textColor = .secondaryLabelColor
         recorder.onRecord = { [weak self] code, modifiers, label in
             guard let self else { return }
@@ -71,7 +75,7 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
         let save = NSButton(title: "Save", target: self, action: #selector(saveBinding)); save.bezelStyle = .rounded; save.keyEquivalent = "\r"
         let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelEditing)); cancel.bezelStyle = .rounded; cancel.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [cancel, save]); buttons.orientation = .horizontal
-        let stack = NSStackView(views: [targetType, appButton, recorder, hint, hide, hideInBackground, closeFolder, folderHint, message, buttons])
+        let stack = NSStackView(views: [targetType, appButton, recorder, hint, hide, hideInBackground, closeFolder, closeFolderInBackground, folderHint, message, buttons])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12
         stack.detachesHiddenViews = true
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -84,7 +88,7 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
     private func updateTargetControls() {
         let folder = draft.targetKind == .folder
         hide.isHidden = folder; hideInBackground.isHidden = folder
-        closeFolder.isHidden = !folder; folderHint.isHidden = !folder
+        closeFolder.isHidden = !folder; closeFolderInBackground.isHidden = !folder; folderHint.isHidden = !folder
         appButton.title = draft.appPath.isEmpty ? (folder ? "Choose Folder…" : "Choose Application…") : draft.name
         appButton.toolTip = draft.appPath.isEmpty ? nil : draft.appPath
     }
@@ -121,6 +125,7 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
         draft.hideOnRepeat = hide.state == .on
         draft.hideWhenNotFrontmost = hideInBackground.state == .on
         draft.closeFolderOnRepeat = closeFolder.state == .on
+        draft.closeFolderWhenNotFrontmost = closeFolderInBackground.state == .on
         if let error = onSave?(draft) { message.stringValue = error } else { close() }
     }
     @objc private func cancelEditing() { close() }

@@ -59,4 +59,28 @@ final class BindingTests: XCTestCase {
             XCTAssertEqual(BindingStore(defaults: defaults).bindings, [binding])
         }
     }
+
+    func testLegacyFolderCloseOptionMigratesToBackgroundOptionOnly() throws {
+        for legacyClose in [false, true] {
+            let legacy = """
+            {"id":"\(UUID().uuidString)","appPath":"/tmp/Example","keyCode":2,"modifiers":256,"keyLabel":"D","hideOnRepeat":false,"targetKind":"folder","closeFolderOnRepeat":\(legacyClose)}
+            """
+            let decoded = try JSONDecoder().decode(Binding.self, from: Data(legacy.utf8))
+            XCTAssertFalse(decoded.closeFolderOnRepeat)
+            XCTAssertEqual(decoded.closeFolderWhenNotFrontmost, legacyClose)
+            let reloaded = try JSONDecoder().decode(Binding.self, from: JSONEncoder().encode(decoded))
+            XCTAssertEqual(reloaded, decoded)
+        }
+    }
+
+    func testLegacyAppOptionsDoNotTurnOnFolderClosing() throws {
+        let legacy = """
+        {"id":"\(UUID().uuidString)","appPath":"/Applications/Safari.app","keyCode":2,"modifiers":256,"keyLabel":"D","hideOnRepeat":true,"hideWhenNotFrontmost":true,"targetKind":"application","closeFolderOnRepeat":true}
+        """
+        let decoded = try JSONDecoder().decode(Binding.self, from: Data(legacy.utf8))
+        XCTAssertTrue(decoded.hideOnRepeat)
+        XCTAssertTrue(decoded.hideWhenNotFrontmost)
+        XCTAssertFalse(decoded.closeFolderOnRepeat)
+        XCTAssertFalse(decoded.closeFolderWhenNotFrontmost)
+    }
 }

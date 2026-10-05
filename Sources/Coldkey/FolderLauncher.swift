@@ -58,13 +58,14 @@ struct FinderWindow: Equatable {
     let id: Int32
     let index: Int
     let folder: URL
+    var isFrontmost = false
 }
 
 protocol FinderControlling {
     func windows() throws -> [FinderWindow]
     func open(_ folder: URL) throws
     func focus(_ window: FinderWindow, folder: URL) throws
-    func close(_ window: FinderWindow, folder: URL) throws
+    func close(_ window: FinderWindow, folder: URL, onlyIfFrontmost: Bool) throws
 }
 
 final class FolderLauncher {
@@ -77,9 +78,14 @@ final class FolderLauncher {
         let access = folder.startAccessingSecurityScopedResource()
         defer { if access { folder.stopAccessingSecurityScopedResource() } }
         let matches = try finder.windows().filter { FolderLocation.canonical($0.folder) == folder }
-        // One action only: choose the frontmost matching window, with a stable ID tie-breaker.
-        if let window = matches.min(by: { ($0.index, $0.id) < ($1.index, $1.id) }) {
-            if resolved.closeFolderOnRepeat { try finder.close(window, folder: folder) }
+        // Prefer the confirmed front window, then front-to-back order and a stable ID tie-breaker.
+        if let window = matches.min(by: {
+            if $0.isFrontmost != $1.isFrontmost { return $0.isFrontmost }
+            return ($0.index, $0.id) < ($1.index, $1.id)
+        }) {
+            if resolved.closeFolderWhenNotFrontmost || (resolved.closeFolderOnRepeat && window.isFrontmost) {
+                try finder.close(window, folder: folder, onlyIfFrontmost: !resolved.closeFolderWhenNotFrontmost)
+            }
             else { try finder.focus(window, folder: folder) }
         } else {
             try finder.open(folder)
