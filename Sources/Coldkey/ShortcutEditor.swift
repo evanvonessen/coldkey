@@ -35,12 +35,13 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
     private let appButton = NSButton(title: "Choose Application…", target: nil, action: nil)
     private let recorder = ShortcutRecorder(title: "Record Shortcut", target: nil, action: nil)
     private let hide = NSButton(checkboxWithTitle: "Hide app when it is already in front", target: nil, action: nil)
+    private let hideInBackground = NSButton(checkboxWithTitle: "Hide even when not frontmost", target: nil, action: nil)
     private let message = NSTextField(wrappingLabelWithString: "")
     var onSave: ((Binding) -> String?)?
     var onClose: (() -> Void)?
     init(binding: Binding?) {
         draft = binding ?? Binding(appPath: "", keyCode: 0, modifiers: 0, keyLabel: "", hideOnRepeat: false)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 410, height: 260), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 410, height: 300), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         super.init(window: window)
         window.title = binding == nil ? "Add Shortcut" : "Edit Shortcut"
         window.delegate = self
@@ -50,6 +51,8 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
         recorder.bezelStyle = .rounded
         if let binding { appButton.title = binding.name; recorder.title = binding.shortcut }
         hide.state = draft.hideOnRepeat ? .on : .off
+        hideInBackground.state = draft.hideWhenNotFrontmost ? .on : .off
+        hideInBackground.toolTip = "Hide this app whenever it is visible. Press the shortcut again to show it."
         recorder.onRecord = { [weak self] code, modifiers, label in
             guard let self else { return }
             self.draft.keyCode = code; self.draft.modifiers = modifiers; self.draft.keyLabel = label
@@ -61,7 +64,7 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
         let save = NSButton(title: "Save", target: self, action: #selector(saveBinding)); save.bezelStyle = .rounded; save.keyEquivalent = "\r"
         let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelEditing)); cancel.bezelStyle = .rounded; cancel.keyEquivalent = "\u{1b}"
         let buttons = NSStackView(views: [cancel, save]); buttons.orientation = .horizontal
-        let stack = NSStackView(views: [appButton, recorder, hint, hide, message, buttons])
+        let stack = NSStackView(views: [appButton, recorder, hint, hide, hideInBackground, message, buttons])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12
         stack.translatesAutoresizingMaskIntoConstraints = false
         window.contentView!.addSubview(stack)
@@ -82,6 +85,7 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
     @objc private func saveBinding() {
         guard !draft.appPath.isEmpty, draft.modifiers != 0 else { message.stringValue = "Choose an application and record a shortcut."; return }
         draft.hideOnRepeat = hide.state == .on
+        draft.hideWhenNotFrontmost = hideInBackground.state == .on
         if let error = onSave?(draft) { message.stringValue = error } else { close() }
     }
     @objc private func cancelEditing() { close() }

@@ -24,4 +24,37 @@ final class BindingTests: XCTestCase {
         try restored.save([])
         XCTAssertTrue(BindingStore(defaults: defaults).bindings.isEmpty)
     }
+
+    func testOlderSavedShortcutsKeepTheirBehavior() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let id = UUID()
+        let legacy = """
+        [{"id":"\(id.uuidString)","appPath":"/Applications/Safari.app","keyCode":0,"modifiers":256,"keyLabel":"A","hideOnRepeat":true}]
+        """
+        defaults.set(Data(legacy.utf8), forKey: "bindings")
+        let restored = BindingStore(defaults: defaults)
+        XCTAssertEqual(restored.bindings.count, 1)
+        let binding = try XCTUnwrap(restored.bindings.first)
+        XCTAssertEqual(binding.id, id)
+        XCTAssertTrue(binding.hideOnRepeat)
+        XCTAssertFalse(binding.hideWhenNotFrontmost)
+    }
+
+    func testBackgroundHideSavesIndependentlyOfOriginalOption() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for originalOption in [false, true] {
+            var binding = Binding(appPath: "/Applications/Safari.app", keyCode: 0, modifiers: UInt32(cmdKey), keyLabel: "A", hideOnRepeat: originalOption)
+            XCTAssertFalse(binding.hideWhenNotFrontmost)
+            binding.hideWhenNotFrontmost = true
+            try BindingStore(defaults: defaults).save([binding])
+            XCTAssertEqual(BindingStore(defaults: defaults).bindings, [binding])
+            binding.hideWhenNotFrontmost = false
+            try BindingStore(defaults: defaults).save([binding])
+            XCTAssertEqual(BindingStore(defaults: defaults).bindings, [binding])
+        }
+    }
 }

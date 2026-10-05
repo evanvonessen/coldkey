@@ -8,6 +8,7 @@ struct Binding: Codable, Identifiable, Equatable {
     var modifiers: UInt32
     var keyLabel: String
     var hideOnRepeat: Bool
+    var hideWhenNotFrontmost = false
     var name: String { URL(fileURLWithPath: appPath).deletingPathExtension().lastPathComponent }
     var shortcut: String {
         (modifiers & UInt32(controlKey) != 0 ? "⌃" : "") +
@@ -16,6 +17,23 @@ struct Binding: Codable, Identifiable, Equatable {
     }
     func conflicts(with other: Binding) -> Bool {
         id != other.id && keyCode == other.keyCode && modifiers == other.modifiers
+    }
+}
+
+extension Binding {
+    private enum CodingKeys: String, CodingKey {
+        case id, appPath, keyCode, modifiers, keyLabel, hideOnRepeat, hideWhenNotFrontmost
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        appPath = try values.decode(String.self, forKey: .appPath)
+        keyCode = try values.decode(UInt32.self, forKey: .keyCode)
+        modifiers = try values.decode(UInt32.self, forKey: .modifiers)
+        keyLabel = try values.decode(String.self, forKey: .keyLabel)
+        hideOnRepeat = try values.decode(Bool.self, forKey: .hideOnRepeat)
+        hideWhenNotFrontmost = try values.decodeIfPresent(Bool.self, forKey: .hideWhenNotFrontmost) ?? false
     }
 }
 
