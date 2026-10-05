@@ -2,12 +2,16 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private let store = BindingStore()
-    private let hotKeys = HotKeyManager()
+    private let store: BindingStore
+    private let hotKeys: HotKeyManager
     private let folders = FolderLauncher()
     private var folderActionInProgress = false
     private var editor: ShortcutEditor?
     private var failures: [String] = []
+    init(store: BindingStore = BindingStore(), hotKeys: HotKeyManager = HotKeyManager()) {
+        self.store = store; self.hotKeys = hotKeys
+        super.init()
+    }
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -27,7 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             empty.isEnabled = false
         }
         for binding in store.bindings {
-            let item = menu.addItem(withTitle: "\(binding.name)    \(binding.shortcut)", action: #selector(launchFromMenu(_:)), keyEquivalent: "")
+            let unavailable = hotKeys.registeredIDs.contains(binding.id) ? "" : " — shortcut unavailable"
+            let item = menu.addItem(withTitle: "\(binding.name)    \(binding.shortcut)\(unavailable)", action: #selector(launchFromMenu(_:)), keyEquivalent: "")
             item.target = self; item.representedObject = binding.id
             let icon = NSWorkspace.shared.icon(forFile: binding.appPath); icon.size = NSSize(width: 16, height: 16); item.image = icon
         }
@@ -120,21 +125,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let editor { editor.showWindow(nil); NSApp.activate(ignoringOtherApps: true); return }
         hotKeys.unregister()
         let controller = ShortcutEditor(binding: binding)
+        var saved = false
         controller.onSave = { [weak self] draft in
             guard let self else { return "Coldkey is unavailable." }
-            if self.store.bindings.contains(where: { draft.conflicts(with: $0) }) { return "That shortcut is already assigned." }
-            var bindings = self.store.bindings.filter { $0.id != draft.id }; bindings.append(draft)
-            let errors = self.hotKeys.register(bindings)
-            self.hotKeys.unregister()
-            guard errors.isEmpty else { return errors.joined(separator: "\n") }
-            do { try self.store.save(bindings); return nil } catch { return error.localizedDescription }
+            let error = self.saveBinding(draft)
+            saved = error == nil
+            return error
         }
         controller.onClose = { [weak self] in
             self?.editor = nil
-            self?.restoreShortcuts()
+            if saved { self?.rebuildMenu() } else { self?.restoreShortcuts() }
         }
         editor = controller
         controller.showWindow(nil); NSApp.activate(ignoringOtherApps: true)
+    }
+    func saveBinding(_ draft: Binding) -> String? {
+        if store.bindings.contains(where: { draft.conflicts(with: $0) }) { return "That shortcut is already assigned." }
+        var bindings = store.bindings.filter { $0.id != draft.id }; bindings.append(draft)
+        let errors = hotKeys.register(bindings)
+        guard errors.isEmpty else { hotKeys.unregister(); return errors.joined(separator: "\n") }
+        do {
+            try store.save(bindings)
+            // Hold successful registrations through save/close instead of releasing and reclaiming them.
+            failures = []
+            return nil
+        } catch { hotKeys.unregister(); return error.localizedDescription }
     }
     @objc private func showFailures() { showError(failures.joined(separator: "\n")) }
     private func showError(_ message: String) {

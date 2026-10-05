@@ -9,7 +9,7 @@ A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later
 - Launch apps from the menu, or edit/remove bindings under **Manage Shortcuts**.
 - Choose **Folder** in the editor to bind a directory. **Close matching folder window when already open** toggles one matching Finder window, even in the background; turn it off to open or focus the folder instead. If several windows show the folder, only the frontmost matching window is affected. Folder shortcuts do not hide Finder.
 
-Shortcuts are saved locally and restored on launch. Existing shortcuts pause while the editor is open so you can record them. Conflicts reported by macOS are shown instead of silently accepting a broken shortcut. System-reserved shortcuts may be intercepted by macOS; choose another combination if necessary.
+Shortcuts are saved locally and restored on launch. They use exclusive native hotkey registration to take precedence over ordinary foreground-app shortcuts. Holding a shortcut triggers it once until you release the key. Existing shortcuts pause while the editor is open so you can record them. Conflicts are shown and prevent saving an unavailable shortcut; saved shortcuts that cannot register at launch are marked unavailable. macOS-reserved shortcuts, secure input, and shortcuts owned by another global tool can prevent registration or delivery. Coldkey cannot override those protections; choose another combination or release the shortcut in the other tool.
 
 Both hide options apply to the whole app, including all its windows. Hidden apps are shown and activated; apps that are not running are launched. Existing shortcuts keep their previous hide setting when updating.
 
