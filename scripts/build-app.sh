@@ -8,8 +8,8 @@ ICONSET="$PWD/.build/Coldkey.iconset"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ICONSET"
 cp "$BIN_DIR/Coldkey" "$APP/Contents/MacOS/Coldkey"
 for size in 16 32 128 256 512; do
-    sips -z "$size" "$size" Assets/coldkey-liquid-glass.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
-    sips -z "$((size * 2))" "$((size * 2))" Assets/coldkey-liquid-glass.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+    sips -z "$size" "$size" Assets/hotkey-original.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z "$((size * 2))" "$((size * 2))" Assets/hotkey-original.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
 done
 iconutil --convert icns --output "$APP/Contents/Resources/Coldkey.icns" "$ICONSET"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
