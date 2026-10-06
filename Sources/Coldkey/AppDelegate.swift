@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let folders = FolderLauncher()
     private var folderActionInProgress = false
     private var editor: ShortcutEditor?
+    private var settings: LoginSettingsWindow?
     private var failures: [String] = []
     init(store: BindingStore = BindingStore(), hotKeys: HotKeyManager = HotKeyManager()) {
         self.store = store; self.hotKeys = hotKeys
@@ -57,6 +58,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             warning.target = self
         }
         menu.addItem(.separator())
+        let preferences = menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        preferences.target = self
         let quit = menu.addItem(withTitle: "Quit Coldkey", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); quit.target = NSApp
         statusItem.menu = menu
     }
@@ -152,6 +155,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch { hotKeys.unregister(); return error.localizedDescription }
     }
     @objc private func showFailures() { showError(failures.joined(separator: "\n")) }
+    @objc private func openSettings() {
+        let controller = settings ?? LoginSettingsWindow()
+        settings = controller
+        controller.refresh()
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    func applicationDidBecomeActive(_ notification: Notification) { settings?.refresh() }
     private func showError(_ message: String) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert(); alert.messageText = "Coldkey"; alert.informativeText = message; alert.runModal()
