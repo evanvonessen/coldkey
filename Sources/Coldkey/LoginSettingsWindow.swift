@@ -10,7 +10,7 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 470, height: 210),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         super.init(window: window)
-        window.title = "Coldkey Settings"
+        window.title = "ColdKey Settings"
         window.isReleasedWhenClosed = false
         window.delegate = self
         checkbox.allowsMixedState = true

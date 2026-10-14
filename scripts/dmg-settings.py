@@ -23,7 +23,7 @@ arrange_by = None
 grid_spacing = 80
 icon_size = 128
 text_size = 14
-icon_locations = {"Coldkey.app": (140, 120), "Applications": (500, 120)}
+icon_locations = {"ColdKey.app": (140, 120), "Applications": (500, 120)}
 
 
 def create_hook(volume, options):

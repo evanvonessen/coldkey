@@ -44,7 +44,7 @@ enum LoginItemInstallation {
             return !app.path.dropFirst(root.count).split(separator: "/").contains { $0.hasPrefix(".") }
         }
         guard bundleIdentifier == "com.evanvonessen.coldkey", app.pathExtension == "app", installed else {
-            return "Move Coldkey.app to Applications (or your home folder’s Applications folder), quit this copy, and open the installed copy to enable Start at login."
+            return "Move ColdKey.app to Applications (or your home folder’s Applications folder), quit this copy, and open the installed copy to enable Start at login."
         }
         return nil
     }
@@ -61,7 +61,7 @@ final class LoginItemController {
         self.service = service
         self.installationProblem = installationProblem
         self.status = service.status
-        // macOS owns the persistent preference. Opening Coldkey never registers it.
+        // macOS owns the persistent preference. Opening ColdKey never registers it.
     }
 
     var canToggle: Bool { status.isRegistered || (status != .unknown && installationProblem() == nil) }
@@ -69,13 +69,13 @@ final class LoginItemController {
     var message: String {
         if let errorMessage { return errorMessage }
         switch status {
-        case .enabled: return "Coldkey will start when you sign in."
+        case .enabled: return "ColdKey will start when you sign in."
         case .requiresApproval:
-            return "Waiting for approval in System Settings. Open Login Items to allow Coldkey, or clear this checkbox to cancel the request."
+            return "Waiting for approval in System Settings. Open Login Items to allow ColdKey, or clear this checkbox to cancel the request."
         case .notRegistered:
-            return installationProblem() ?? "Off. Coldkey will not start automatically."
+            return installationProblem() ?? "Off. ColdKey will not start automatically."
         case .notFound:
-            return installationProblem() ?? "macOS could not find Coldkey’s login item. Try enabling it again from the installed app."
+            return installationProblem() ?? "macOS could not find ColdKey’s login item. Try enabling it again from the installed app."
         case .unknown:
             return "macOS could not report the login-item status. Check Login Items in System Settings."
         }

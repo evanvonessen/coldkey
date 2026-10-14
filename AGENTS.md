@@ -1,4 +1,4 @@
-# Coldkey
+# ColdKey
 
 - Build a lightweight, minimal, native macOS menu bar app. Keep dependencies and background work to a minimum.
 - After each implementation prompt, validate the working version, commit changes, and push to `main` at `https://github.com/evanvonessen/coldkey.git`.

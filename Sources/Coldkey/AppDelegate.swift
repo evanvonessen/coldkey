@@ -16,8 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "command", accessibilityDescription: "Coldkey")
-        statusItem.button?.toolTip = "Coldkey"
+        statusItem.button?.image = NSImage(systemSymbolName: "command", accessibilityDescription: "ColdKey")
+        statusItem.button?.toolTip = "ColdKey"
         hotKeys.onPress = { [weak self] id in self?.launch(id) }
         restoreShortcuts()
     }
@@ -60,7 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         let preferences = menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         preferences.target = self
-        let quit = menu.addItem(withTitle: "Quit Coldkey", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); quit.target = NSApp
+        let quit = menu.addItem(withTitle: "Quit ColdKey", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); quit.target = NSApp
         statusItem.menu = menu
     }
     private func launch(_ id: UUID) {
@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func requestFinderPermission(for id: UUID) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "Allow Coldkey to control Finder?"
+        alert.messageText = "Allow ColdKey to control Finder?"
         alert.informativeText = "This lets your folder shortcuts open a folder or close one matching Finder window. macOS will ask for permission next."
         alert.addButton(withTitle: "Continue…"); alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { folderActionInProgress = false; return }
@@ -130,7 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = ShortcutEditor(binding: binding)
         var saved = false
         controller.onSave = { [weak self] draft in
-            guard let self else { return "Coldkey is unavailable." }
+            guard let self else { return "ColdKey is unavailable." }
             let error = self.saveBinding(draft)
             saved = error == nil
             return error
@@ -165,6 +165,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidBecomeActive(_ notification: Notification) { settings?.refresh() }
     private func showError(_ message: String) {
         NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert(); alert.messageText = "Coldkey"; alert.informativeText = message; alert.runModal()
+        let alert = NSAlert(); alert.messageText = "ColdKey"; alert.informativeText = message; alert.runModal()
     }
 }

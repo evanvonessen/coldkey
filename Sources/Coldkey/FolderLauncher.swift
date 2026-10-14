@@ -7,9 +7,9 @@ enum FolderError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unavailable: return "The folder could not be found or accessed. Edit its shortcut and choose the folder again."
-        case .automationRequired: return "Allow Coldkey to control Finder to open and close the selected folder's window."
-        case .automationDenied: return "Allow Finder under System Settings → Privacy & Security → Automation → Coldkey, then try again."
-        case .windowChanged: return "That Finder window changed before Coldkey could act. Press the shortcut again."
+        case .automationRequired: return "Allow ColdKey to control Finder to open and close the selected folder's window."
+        case .automationDenied: return "Allow Finder under System Settings → Privacy & Security → Automation → ColdKey, then try again."
+        case .windowChanged: return "That Finder window changed before ColdKey could act. Press the shortcut again."
         case .finderFailure(let message): return "Finder could not finish: \(message)"
         }
     }

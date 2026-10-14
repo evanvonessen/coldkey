@@ -65,7 +65,7 @@ final class HotKeyManager {
 
     func register(_ bindings: [Binding]) -> [String] {
         unregister()
-        guard handlerStatus == noErr else { return ["Coldkey could not listen for shortcuts (\(handlerStatus)). Restart the app and try again."] }
+        guard handlerStatus == noErr else { return ["ColdKey could not listen for shortcuts (\(handlerStatus)). Restart the app and try again."] }
         var failures: [String] = []
         let allowedModifiers = UInt32(cmdKey | optionKey | controlKey)
         let modifierKeys: Set<UInt32> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
@@ -76,7 +76,7 @@ final class HotKeyManager {
                 continue
             }
             guard Self.nextIdentifier < UInt32.max else {
-                failures.append("Restart Coldkey before registering another shortcut."); continue
+                failures.append("Restart ColdKey before registering another shortcut."); continue
             }
             let number = Self.nextIdentifier
             Self.nextIdentifier += 1

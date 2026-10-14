@@ -112,12 +112,12 @@ final class LoginItemTests: XCTestCase {
 
     func testDevelopmentCopyCannotEnableButCanDisableExistingRegistration() {
         let service = FakeLoginItem()
-        let model = LoginItemController(service: service, installationProblem: { "Move Coldkey to Applications." })
+        let model = LoginItemController(service: service, installationProblem: { "Move ColdKey to Applications." })
         XCTAssertFalse(model.canToggle)
         model.setEnabled(true)
         XCTAssertEqual(service.registrations, 0)
         XCTAssertEqual(model.status, .notRegistered)
-        XCTAssertEqual(model.message, "Move Coldkey to Applications.")
+        XCTAssertEqual(model.message, "Move ColdKey to Applications.")
         service.status = .requiresApproval
         model.refresh()
         XCTAssertTrue(model.canToggle)
@@ -140,23 +140,23 @@ final class LoginItemTests: XCTestCase {
 
     func testInstallationPolicyAcceptsApplicationsAndRejectsDisposableOrNonAppCopies() {
         let roots = [URL(fileURLWithPath: "/Applications"), URL(fileURLWithPath: "/Users/example/Applications")]
-        for path in ["/Applications/Coldkey.app", "/Applications/Utilities/Coldkey.app", "/Users/example/Applications/Coldkey.app"] {
+        for path in ["/Applications/ColdKey.app", "/Applications/Utilities/ColdKey.app", "/Users/example/Applications/ColdKey.app"] {
             XCTAssertNil(LoginItemInstallation.problem(bundleURL: URL(fileURLWithPath: path), bundleIdentifier: "com.evanvonessen.coldkey", applicationDirectories: roots), path)
         }
-        for path in ["/tmp/.build/Coldkey.app", "/ApplicationsOther/Coldkey.app", "/Applications/Project/.build/Coldkey.app", "/Applications/Coldkey", "/Users/example/Downloads/Coldkey.app"] {
+        for path in ["/tmp/.build/ColdKey.app", "/ApplicationsOther/ColdKey.app", "/Applications/Project/.build/ColdKey.app", "/Applications/Coldkey", "/Users/example/Downloads/ColdKey.app"] {
             XCTAssertNotNil(LoginItemInstallation.problem(bundleURL: URL(fileURLWithPath: path), bundleIdentifier: "com.evanvonessen.coldkey", applicationDirectories: roots), path)
         }
-        XCTAssertNotNil(LoginItemInstallation.problem(bundleURL: URL(fileURLWithPath: "/Applications/Coldkey.app"), bundleIdentifier: nil, applicationDirectories: roots))
+        XCTAssertNotNil(LoginItemInstallation.problem(bundleURL: URL(fileURLWithPath: "/Applications/ColdKey.app"), bundleIdentifier: nil, applicationDirectories: roots))
     }
 
     func testApplicationsSymlinkToBuildCopyDoesNotBypassInstallationPolicy() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let applications = root.appendingPathComponent("Applications")
-        let build = root.appendingPathComponent("build/Coldkey.app")
+        let build = root.appendingPathComponent("build/ColdKey.app")
         try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: build, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        let link = applications.appendingPathComponent("Coldkey.app")
+        let link = applications.appendingPathComponent("ColdKey.app")
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: build)
         XCTAssertNotNil(LoginItemInstallation.problem(bundleURL: link, bundleIdentifier: "com.evanvonessen.coldkey", applicationDirectories: [applications]))
     }
@@ -230,7 +230,7 @@ final class LoginSettingsWindowTests: XCTestCase {
     func testBuildCopyExplainsDisabledCheckboxAndFitsLongStatus() throws {
         _ = NSApplication.shared
         let service = FakeLoginItem()
-        let problem = try XCTUnwrap(LoginItemInstallation.problem(bundleURL: URL(fileURLWithPath: "/tmp/.build/Coldkey.app"), bundleIdentifier: "com.evanvonessen.coldkey"))
+        let problem = try XCTUnwrap(LoginItemInstallation.problem(bundleURL: URL(fileURLWithPath: "/tmp/.build/ColdKey.app"), bundleIdentifier: "com.evanvonessen.coldkey"))
         let settings = LoginSettingsWindow(loginItem: LoginItemController(service: service, installationProblem: { problem }))
         defer { settings.close() }
         let content = try XCTUnwrap(settings.window?.contentView)

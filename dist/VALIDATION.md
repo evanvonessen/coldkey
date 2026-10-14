@@ -1,23 +1,22 @@
-# Packaged Coldkey validation
+# Packaged ColdKey validation
 
-Validated on October 13, 2026. The app source and original icon are unchanged from `9314dc59fd93a7d9e24f83fe971e788ac97534b3`; this update adds a website-downloadable DMG with a saved drag-to-Applications Finder window.
+Validated on October 13, 2026. The app is now displayed and packaged as **ColdKey**. Its bundle identifier remains `com.evanvonessen.coldkey` to preserve existing shortcuts and settings. The original HotKey icon and shortcut behavior are retained.
 
-- PASS (earlier in this session; app source unchanged): `swift test` — 51 tests, zero failures or skips, including native Carbon registration and AppKit control checks.
-- PASS (earlier in this session): existing `scripts/build-app.sh` native release build and strict signature verification.
-- PASS: `scripts/build-dmg.sh` universal release build, both `arm64` and `x86_64` architecture checks, and strict signature verification for both architectures.
-- PASS: both executable slices declare a macOS 13.0 minimum.
-- PASS: compressed, read-only UDZO image verification, read-only mounting, Applications symlink, and SHA-256 checksum verification.
-- PASS: opened the final DMG through Finder; it automatically opened a window showing the app icon on the left, the installation arrow, and Applications on the right. No visible Read Me or source files appear in the installer. Screenshot and saved Finder metadata checked.
-- PASS: live drag from the app icon onto Applications reached Finder's normal replace-existing-app prompt. Cancelled that prompt to preserve the installed copy.
-- PASS: strict signature verification of the app inside the final mounted DMG, and of an identical app copied out to a temporary folder. The build script now performs this check inside every completed image before publishing it.
-- PASS (earlier in this session): copied the previous package's unchanged app source build to `/Applications/Coldkey.app`. The installed app launched on Apple Silicon, stayed running through the startup check, and uses menu-bar accessory activation policy.
-- PASS: the original icon source matches the full-size PNG linked from the supplied [MacUpdate listing](https://hotkey.macupdate.com/) byte for byte. The packaged ICNS was extracted and visually checked.
-- PASS: shell syntax and `git diff --check`.
-- BLOCKED: live app menu interaction through Computer Use; the tool reported "Computer Use was not approved to use Coldkey." Finder installer interaction is verified; no live shortcut-recording, folder-control, or login/reboot check is claimed for the app.
-- NOT RUN: runtime testing on an Intel Mac or macOS 13. The Intel binary was compiled and inspected on Apple Silicon.
+- PASS: `swift test` — 51 tests, zero failures or skips, including native Carbon registration and AppKit control checks.
+- PASS: universal release build containing `arm64` and `x86_64`; both executable slices declare a macOS 13.0 minimum.
+- PASS: strict signature verification of the staged notarization app for both architectures, using `Developer ID Application: Evan Von Essen (3N83BX5M9G)`, Hardened Runtime, a secure timestamp, and the Apple Events entitlement needed for Finder controls.
+- PASS: the Developer ID signed app launched as **ColdKey**, stayed running through its startup check, and uses menu-bar accessory activation policy. Only that temporary test instance was quit.
+- PASS: packaged `ColdKey.app` display name, unchanged bundle identifier, saved icon layout, original icon, installation arrow, and Applications symlink.
+- PASS: the current renamed, ad-hoc signed DMG was rebuilt with the updated packaging script; image verification, mounted app signature verification, and SHA-256 checksum verification passed. This is the intermediate installer currently in `dist/`.
+- PASS: shell syntax, entitlement plist validation, and `git diff --check`.
+- PASS: the release workflow rejects missing or unsuitable signing identities before updating the installer and reads notarization credentials from Keychain.
+- PASS: five packaging workflow tests using local tool doubles cover pending checks without duplicate uploads, both acceptance checkpoints, retry after a verification failure, rejection diagnostics, changed source inputs, distribution-check failure, and uncertain upload outcomes. These tests do not replace Apple's server checks.
+- PASS: the live `--resume` command reuses the existing app submission, returns exit 75 while it is pending, and preserves the signed archive and previous installer.
+- IN PROGRESS: Apple app notarization submission `d478b150-b966-400c-b640-42469949d972`.
+- PENDING: final DMG signing, Apple DMG acceptance, attached approval tickets, final image/checksum checks, and publication of the notarized release.
+- LIMITED: the local `syspolicy_check notary-submission` command returned exit 70 with an empty issue list. Apple’s server result and post-notarization distribution checks will determine the release outcome.
+- NOT RUN: runtime testing on an Intel Mac or macOS 13, actual login/reboot testing, and live Finder-control permission testing for the signed app.
 
-The package is ad-hoc signed, with no Developer ID certificate or notarization. This test Mac reports Gatekeeper security disabled, so successful local launch does not prove Gatekeeper acceptance on another Mac. Installation instructions explain the possible Open Anyway step.
+This Mac reports Gatekeeper assessments disabled. A successful local launch or `spctl` override alone does not prove website-download acceptance. The release requires Apple **Accepted** results and validated approval tickets for both the app and DMG before publishing the final installer.
 
-The standard arrow background comes from dmgbuild 1.6.7, with its MIT license included in the DMG's hidden `.licenses/dmgbuild.txt`. Pinned packaging dependencies are build-time tools only.
-
-Installer SHA-256: `bd164883a7869ab9cce6eaffcd2ac51297248eb19925fb056ab9adeab09a5cdf`.
+The standard arrow background comes from dmgbuild 1.6.7, with its MIT license included in the DMG's hidden `.licenses/dmgbuild.txt`. Pinned packaging dependencies are build-time tools only; no Python or third-party runtime dependencies are added to the app.
