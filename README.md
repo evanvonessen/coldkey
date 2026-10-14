@@ -16,6 +16,16 @@ Both hide options apply to the whole app, including all its windows. Hidden apps
 
 Folder selections use saved bookmarks to follow moves and renames across restarts. If a folder is missing or inaccessible, choose it again. New folder shortcuts have both close options off. Existing folder shortcuts retain their behavior: the old close option migrates to **Close even when not frontmost**; old open-only shortcuts keep both off. The first folder action explains and requests macOS permission to control Finder; you can cancel or manage it in **System Settings → Privacy & Security → Automation**. No Accessibility permission is needed. Finder exposes a window's current folder, so a folder in an inactive tab is not treated as a matching window.
 
+## Install the packaged app
+
+[Download Coldkey.dmg](https://github.com/evanvonessen/coldkey/raw/refs/heads/main/dist/Coldkey.dmg). The package supports Apple Silicon and Intel Macs running macOS 13 or later; no developer tools are needed to install it.
+
+Quit any running Coldkey, open the DMG, drag **Coldkey.app** onto **Applications**, then eject the disk and open Coldkey from Applications. Look for **⌘** in the menu bar. Updating keeps your saved shortcuts.
+
+This build is ad-hoc signed and is not notarized. If macOS blocks it, try opening the installed app once, then choose **System Settings → Privacy & Security → Open Anyway** and confirm opening it.
+
+The installer and its [SHA-256 checksum](dist/Coldkey.dmg.sha256) are saved in `dist/`. To verify a download, place both files in the same folder and run `shasum -a 256 -c Coldkey.dmg.sha256` there. See the [validation record](dist/VALIDATION.md) for checks and remaining test limits.
+
 ## Build and run
 
 Requires the Swift tools included with Xcode or its Command Line Tools.
@@ -34,6 +44,14 @@ The build packages the original HotKey by codenuts app icon at standard and Reti
 ```sh
 swift test
 ```
+
+## Build the DMG
+
+```sh
+./scripts/build-dmg.sh
+```
+
+This builds the current source for Apple Silicon and Intel, checks the app signature, and creates and verifies a compressed, read-only `dist/Coldkey.dmg` with an Applications shortcut and installation instructions. It also writes `dist/Coldkey.dmg.sha256`. Commit both distribution files when publishing an updated installer. The script uses only Swift and tools included with macOS, and leaves the running app and installed copies alone.
 
 ## Small by design
 
