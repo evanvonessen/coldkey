@@ -24,9 +24,9 @@ Folder selections use saved bookmarks to follow moves and renames across restart
 
 Quit any running ColdKey and double-click the DMG. It opens a compact installer window with the original ColdKey icon on the left, an arrow, and Applications on the right. Drag **ColdKey** onto **Applications**, then eject the disk and open ColdKey from Applications. Look for **⌘** in the menu bar. Updating keeps your saved shortcuts.
 
-Once the notarized release is ready, upload `dist/ColdKey.dmg` to your website and link directly to that file. Visitors download and open the DMG; they do not need GitHub access, source files, or developer tools. This repository is private, so its GitHub download link requires repository access.
+Upload `dist/ColdKey.dmg` to your website and link directly to that file. Visitors download and open the DMG; they do not need GitHub access, source files, or developer tools. This repository is private, so its GitHub download link requires repository access.
 
-**Website release pending Apple approval.** The renamed app has been Developer ID signed and submitted to Apple. The repository DMG is still the ad-hoc signed build; it will be replaced after Apple accepts the app and DMG and both approval tickets validate. Until then, macOS may require **System Settings → Privacy & Security → Open Anyway** for this existing installer.
+**Signed and notarized by Apple.** Both the app and DMG include validated Apple approval tickets. This release should not require **Open Anyway**; macOS may still display its normal first-open confirmation for an app downloaded from the internet.
 
 The installer and its [SHA-256 checksum](dist/ColdKey.dmg.sha256) are saved in `dist/`. To verify a download, place both files in the same folder and run `shasum -a 256 -c ColdKey.dmg.sha256` there. See the [validation record](dist/VALIDATION.md) for checks and remaining test limits.
 
@@ -56,7 +56,7 @@ python3 Tests/Packaging/test_notarization.py
 ./scripts/build-dmg.sh
 ```
 
-This builds the current source for Apple Silicon and Intel, checks the app signature, and creates and verifies a compressed, read-only `dist/ColdKey.dmg` with a saved Finder icon layout, installation arrow, and Applications shortcut. Only the two drag-and-drop icons appear in the installer window. It also writes `dist/ColdKey.dmg.sha256`. Commit both distribution files when publishing an updated installer.
+This builds an ad-hoc signed development installer from the current source for Apple Silicon and Intel. It checks the app signature and creates and verifies a compressed, read-only `dist/ColdKey.dmg` with a saved Finder icon layout, installation arrow, and Applications shortcut. Only the two drag-and-drop icons appear in the installer window. It also writes `dist/ColdKey.dmg.sha256`. For website releases, use the signing and notarization workflow below and commit the installer, checksum, and acceptance receipts.
 
 DMG creation also requires Python 3.9 or later. The first run installs pinned `dmgbuild` packaging tools into the ignored `.build/dmg-tools` environment; later runs reuse them. These are build tools only: the installed app contains no Python or third-party runtime dependencies. The script leaves the running app and installed copies alone.
 
