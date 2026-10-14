@@ -20,7 +20,9 @@ Folder selections use saved bookmarks to follow moves and renames across restart
 
 [Download Coldkey.dmg](https://github.com/evanvonessen/coldkey/raw/refs/heads/main/dist/Coldkey.dmg). The package supports Apple Silicon and Intel Macs running macOS 13 or later; no developer tools are needed to install it.
 
-Quit any running Coldkey, open the DMG, drag **Coldkey.app** onto **Applications**, then eject the disk and open Coldkey from Applications. Look for **⌘** in the menu bar. Updating keeps your saved shortcuts.
+Quit any running Coldkey and double-click the DMG. It opens a compact installer window with the original Coldkey icon on the left, an arrow, and Applications on the right. Drag **Coldkey** onto **Applications**, then eject the disk and open Coldkey from Applications. Look for **⌘** in the menu bar. Updating keeps your saved shortcuts.
+
+To offer it on your website, upload `dist/Coldkey.dmg` and link directly to that file. Visitors download and open the DMG; they do not need GitHub access, source files, or developer tools. This repository is private, so its GitHub download link requires repository access.
 
 This build is ad-hoc signed and is not notarized. If macOS blocks it, try opening the installed app once, then choose **System Settings → Privacy & Security → Open Anyway** and confirm opening it.
 
@@ -51,7 +53,9 @@ swift test
 ./scripts/build-dmg.sh
 ```
 
-This builds the current source for Apple Silicon and Intel, checks the app signature, and creates and verifies a compressed, read-only `dist/Coldkey.dmg` with an Applications shortcut and installation instructions. It also writes `dist/Coldkey.dmg.sha256`. Commit both distribution files when publishing an updated installer. The script uses only Swift and tools included with macOS, and leaves the running app and installed copies alone.
+This builds the current source for Apple Silicon and Intel, checks the app signature, and creates and verifies a compressed, read-only `dist/Coldkey.dmg` with a saved Finder icon layout, installation arrow, and Applications shortcut. Only the two drag-and-drop icons appear in the installer window. It also writes `dist/Coldkey.dmg.sha256`. Commit both distribution files when publishing an updated installer.
+
+DMG creation also requires Python 3.9 or later. The first run installs pinned `dmgbuild` packaging tools into the ignored `.build/dmg-tools` environment; later runs reuse them. These are build tools only: the installed app contains no Python or third-party runtime dependencies. The script leaves the running app and installed copies alone.
 
 ## Small by design
 

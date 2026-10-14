@@ -5,10 +5,26 @@ cd "$(dirname "$0")/.."
 OUTPUT="${1:-$PWD/dist/Coldkey.dmg}"
 mkdir -p "$PWD/.build" "$(dirname "$OUTPUT")"
 STAGING="$(mktemp -d "$PWD/.build/dmg.XXXXXX")"
-cleanup() { rm -rf -- "$STAGING"; }
+VERIFY_MOUNT=""
+cleanup() {
+    if [[ -n "$VERIFY_MOUNT" ]]; then
+        hdiutil detach "$VERIFY_MOUNT" || return
+    fi
+    rm -rf -- "$STAGING"
+}
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+# Packaging tools stay in the ignored build directory, outside the app bundle.
+TOOLS="$PWD/.build/dmg-tools"
+if [[ ! -x "$TOOLS/bin/python" ]]; then
+    python3 -m venv "$TOOLS"
+fi
+if ! cmp -s scripts/requirements-dmg.txt "$TOOLS/requirements.txt"; then
+    "$TOOLS/bin/python" -m pip install --disable-pip-version-check -r scripts/requirements-dmg.txt
+    cp scripts/requirements-dmg.txt "$TOOLS/requirements.txt"
+fi
 
 CONTENTS="$STAGING/contents"
 APP="$CONTENTS/Coldkey.app"
@@ -17,31 +33,16 @@ for ARCH in arm64 x86_64; do
     lipo "$APP/Contents/MacOS/Coldkey" -verify_arch "$ARCH"
 done
 codesign --verify --strict --all-architectures "$APP"
-ln -s /Applications "$CONTENTS/Applications"
-cat > "$CONTENTS/Read Me.txt" <<'README'
-Coldkey — macOS 13 or later (Apple Silicon and Intel)
 
-Install
-1. Quit any running copy of Coldkey from its menu bar.
-2. Drag Coldkey.app onto Applications.
-3. Eject this disk and open Coldkey from Applications.
-4. Look for the ⌘ icon in your menu bar. Coldkey has no Dock icon.
-
-Your existing shortcuts are kept when replacing an older copy.
-Use Settings… in the ⌘ menu to enable Start at login if desired.
-
-This build is ad-hoc signed and is not notarized. If macOS blocks it,
-try opening Coldkey once, then use System Settings → Privacy & Security
-→ Open Anyway and confirm opening it.
-
-The app uses the original HotKey by codenuts logo requested for Coldkey.
-Source: https://hotkey.macupdate.com/
-Coldkey source and build instructions: https://github.com/evanvonessen/coldkey
-README
-
-hdiutil create -volname Coldkey -srcfolder "$CONTENTS" -fs HFS+ \
-    -format UDZO "$STAGING/Coldkey.dmg"
+"$TOOLS/bin/python" -m dmgbuild -s scripts/dmg-settings.py -D "app=$APP" \
+    Coldkey "$STAGING/Coldkey.dmg"
 hdiutil verify "$STAGING/Coldkey.dmg"
+mkdir "$STAGING/verify"
+hdiutil attach -readonly -nobrowse -mountpoint "$STAGING/verify" "$STAGING/Coldkey.dmg" >/dev/null
+VERIFY_MOUNT="$STAGING/verify"
+codesign --verify --strict --all-architectures "$VERIFY_MOUNT/Coldkey.app"
+hdiutil detach "$VERIFY_MOUNT"
+VERIFY_MOUNT=""
 mv -f -- "$STAGING/Coldkey.dmg" "$OUTPUT"
 (
     cd "$(dirname "$OUTPUT")"
