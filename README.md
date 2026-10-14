@@ -1,5 +1,9 @@
 # ColdKey
 
+[**Download ColdKey.dmg**](dist/ColdKey.dmg?raw=true)
+
+Supports Apple Silicon and Intel Macs running macOS 13 or later. No developer tools are needed to install it.
+
 A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later.
 
 - Click the **⌘** menu bar icon → **Add Shortcut…**.
@@ -17,8 +21,6 @@ Both hide options apply to the whole app, including all its windows. Hidden apps
 Folder selections use saved bookmarks to follow moves and renames across restarts. If a folder is missing or inaccessible, choose it again. New folder shortcuts have both close options off. Existing folder shortcuts retain their behavior: the old close option migrates to **Close even when not frontmost**; old open-only shortcuts keep both off. The first folder action explains and requests macOS permission to control Finder; you can cancel or manage it in **System Settings → Privacy & Security → Automation**. No Accessibility permission is needed. Finder exposes a window's current folder, so a folder in an inactive tab is not treated as a matching window.
 
 ## Install the packaged app
-
-[Download ColdKey.dmg](https://github.com/evanvonessen/coldkey/raw/refs/heads/main/dist/ColdKey.dmg). The package supports Apple Silicon and Intel Macs running macOS 13 or later; no developer tools are needed to install it.
 
 Quit any running ColdKey and double-click the DMG. It opens a compact installer window with the original ColdKey icon on the left, an arrow, and Applications on the right. Drag **ColdKey** onto **Applications**, then eject the disk and open ColdKey from Applications. Look for **⌘** in the menu bar. Updating keeps your saved shortcuts.
 
@@ -39,7 +41,7 @@ For updates, pull the latest changes, then double-click **Build and Run.command*
 open .build/ColdKey.app
 ```
 
-Copy `.build/ColdKey.app` to Applications if desired. Local builds use ad-hoc signing. The bundle identifier stays `com.evanvonessen.coldkey` so existing shortcuts and settings survive the ColdKey name change. Open `Package.swift` in Xcode for development.
+Copy `.build/ColdKey.app` to Applications if desired. Local builds use ad-hoc signing. The [existing bundle identifier](scripts/build-app.sh) stays the same so shortcuts and settings survive the ColdKey name change. Open `Package.swift` in Xcode for development.
 
 The build packages the original HotKey by codenuts app icon at standard and Retina sizes. The menu bar keeps its monochrome ⌘ symbol. Icon sources and provenance are in [Assets](Assets/README.md).
 
@@ -88,4 +90,4 @@ A notarized release should not require **Open Anyway**; macOS may still display 
 
 ## Small by design
 
-AppKit controls, Carbon system hotkey registration, and NSWorkspace app activation. No third-party dependencies, web views, polling, network calls, Accessibility permission, or background service. No Dock icon or window at launch. Bindings live in UserDefaults under `com.evanvonessen.coldkey` when running the app bundle.
+AppKit controls, Carbon system hotkey registration, and NSWorkspace app activation. No third-party dependencies, web views, polling, network calls, Accessibility permission, or background service. No Dock icon or window at launch. Bindings live in UserDefaults under the app's bundle identifier when running the app bundle.
