@@ -5,6 +5,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store: BindingStore
     private let hotKeys: HotKeyManager
     private let folders = FolderLauncher()
+    private let functionRow = FunctionRowController()
+    private let functionRowShortcut = FunctionRowShortcutFilter()
+    private var migrationWarning: String?
     private var folderActionInProgress = false
     private var editor: ShortcutEditor?
     private var settings: LoginSettingsWindow?
@@ -19,7 +22,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "command", accessibilityDescription: "ColdKey")
         statusItem.button?.toolTip = "ColdKey"
-        hotKeys.onPress = { [weak self] id in self?.launch(id) }
+        do { migrationWarning = try store.ensureFunctionRowShortcut() }
+        catch { migrationWarning = error.localizedDescription }
+        hotKeys.onPress = { [weak self] id in
+            guard let self else { return }
+            if let binding = self.store.bindings.first(where: { $0.id == id && $0.targetKind == .functionRow }) {
+                self.functionRowShortcut.canonicalPress(binding)
+            } else { self.launch(id) }
+        }
+        hotKeys.onRelease = { [weak self] id in self?.functionRowShortcut.canonicalRelease(id) }
+        functionRowShortcut.onPress = { [weak self] binding in
+            guard let self else { return }
+            if let editor = self.editor { _ = editor.recordReservedShortcut(binding); return }
+            self.launch(binding.id)
+        }
+        functionRowShortcut.onChange = { [weak self] in self?.rebuildMenu(); self?.settings?.refresh() }
         restoreShortcuts()
         updates.onChange = { [weak self] in
             self?.rebuildMenu()
@@ -28,20 +45,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updates.start()
     }
     private func restoreShortcuts() {
-        failures = hotKeys.register(store.bindings)
+        // Keep the reserved row chord while independently restoring any available app/folder keys.
+        failures = []
+        var restored = store.bindings.filter { $0.targetKind == .functionRow }
+        failures += hotKeys.replace(restored)
+        for binding in store.bindings where binding.targetKind != .functionRow {
+            let errors = hotKeys.replace(restored + [binding])
+            if errors.isEmpty { restored.append(binding) }
+            failures += errors
+        }
+        refreshFunctionRowShortcut()
         rebuildMenu()
     }
+    private func refreshFunctionRowShortcut() {
+        functionRowShortcut.configure(store.bindings.first { $0.targetKind == .functionRow && hotKeys.registeredIDs.contains($0.id) })
+    }
     private func rebuildMenu() {
+        guard statusItem != nil else { return }
         let menu = NSMenu()
         if store.bindings.isEmpty {
             let empty = menu.addItem(withTitle: "No shortcuts yet", action: nil, keyEquivalent: "")
             empty.isEnabled = false
         }
         for binding in store.bindings {
-            let unavailable = hotKeys.registeredIDs.contains(binding.id) ? "" : " — shortcut unavailable"
+            let available = hotKeys.registeredIDs.contains(binding.id)
+                && (binding.targetKind != .functionRow || functionRowShortcut.isActive)
+            let unavailable = available ? "" : " — shortcut unavailable"
             let item = menu.addItem(withTitle: "\(binding.name)    \(binding.shortcut)\(unavailable)", action: #selector(launchFromMenu(_:)), keyEquivalent: "")
             item.target = self; item.representedObject = binding.id
-            let icon = NSWorkspace.shared.icon(forFile: binding.appPath); icon.size = NSSize(width: 16, height: 16); item.image = icon
+            let icon = binding.targetKind == .functionRow
+                ? NSImage(systemSymbolName: "keyboard", accessibilityDescription: nil)
+                : NSWorkspace.shared.icon(forFile: binding.appPath)
+            icon?.size = NSSize(width: 16, height: 16); item.image = icon
         }
         menu.addItem(.separator())
         let add = menu.addItem(withTitle: "Add Shortcut…", action: #selector(addShortcut), keyEquivalent: "")
@@ -59,7 +94,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             let edit = menu.addItem(withTitle: "Manage Shortcuts", action: nil, keyEquivalent: ""); edit.submenu = editMenu
         }
-        if !failures.isEmpty {
+        if store.bindings.contains(where: { $0.targetKind == .functionRow }) && !functionRowShortcut.isActive {
+            let allow = menu.addItem(withTitle: "Allow Function Row Shortcut…", action: #selector(allowFunctionRowShortcut), keyEquivalent: "")
+            allow.target = self
+        }
+        if !failures.isEmpty || migrationWarning != nil {
             let warning = menu.addItem(withTitle: "Shortcut unavailable…", action: #selector(showFailures), keyEquivalent: "")
             warning.target = self
         }
@@ -73,6 +112,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private func launch(_ id: UUID) {
         guard let binding = store.bindings.first(where: { $0.id == id }) else { return }
+        if binding.targetKind == .functionRow {
+            do { try functionRow.toggle() }
+            catch { showError(error.localizedDescription) }
+            return
+        }
         if binding.targetKind == .folder {
             guard !folderActionInProgress else { return }
             folderActionInProgress = true
@@ -134,7 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private func openEditor(_ binding: Binding?) {
         if let editor { editor.showWindow(nil); NSApp.activate(ignoringOtherApps: true); return }
-        hotKeys.unregister()
+        // Keep the function-row chord reserved even while another shortcut is being recorded.
+        _ = hotKeys.replace(store.bindings.filter { $0.targetKind == .functionRow })
         let controller = ShortcutEditor(binding: binding)
         var saved = false
         controller.onSave = { [weak self] draft in
@@ -151,26 +196,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.showWindow(nil); NSApp.activate(ignoringOtherApps: true)
     }
     func saveBinding(_ draft: Binding) -> String? {
+        if draft.targetKind == .functionRow {
+            guard FunctionRowInput.supports(binding: draft) else { return "Choose F1, F2, F7–F20, or a modified letter or other key." }
+            if store.bindings.contains(where: { $0.targetKind == .functionRow && $0.id != draft.id }) {
+                return "Edit the existing Toggle Function Row shortcut to change its key."
+            }
+        }
         if store.bindings.contains(where: { draft.conflicts(with: $0) }) { return "That shortcut is already assigned." }
         var bindings = store.bindings.filter { $0.id != draft.id }; bindings.append(draft)
-        let errors = hotKeys.register(bindings)
-        guard errors.isEmpty else { hotKeys.unregister(); return errors.joined(separator: "\n") }
+        let errors = hotKeys.replace(bindings)
+        guard errors.isEmpty else {
+            _ = hotKeys.replace(store.bindings.filter { $0.targetKind == .functionRow })
+            return errors.joined(separator: "\n")
+        }
         do {
             try store.save(bindings)
             // Hold successful registrations through save/close instead of releasing and reclaiming them.
             failures = []
+            refreshFunctionRowShortcut()
             return nil
-        } catch { hotKeys.unregister(); return error.localizedDescription }
+        } catch {
+            _ = hotKeys.replace(store.bindings.filter { $0.targetKind == .functionRow })
+            return error.localizedDescription
+        }
     }
-    @objc private func showFailures() { showError(failures.joined(separator: "\n")) }
+    @objc private func showFailures() { showError((failures + [migrationWarning].compactMap { $0 }).joined(separator: "\n")) }
+    @objc private func allowFunctionRowShortcut() {
+        FunctionRowShortcutFilter.requestPermission()
+        refreshFunctionRowShortcut()
+        rebuildMenu()
+    }
     @objc private func openSettings() {
-        let controller = settings ?? LoginSettingsWindow(updates: updates)
+        let controller = settings ?? LoginSettingsWindow(updates: updates, functionRowShortcut: functionRowShortcut)
         settings = controller
+        controller.onFunctionRowPermissionChange = { [weak self] in
+            self?.refreshFunctionRowShortcut(); self?.rebuildMenu()
+        }
         controller.refresh()
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    func applicationDidBecomeActive(_ notification: Notification) { settings?.refresh() }
+    func applicationDidBecomeActive(_ notification: Notification) {
+        refreshFunctionRowShortcut(); rebuildMenu(); settings?.refresh()
+    }
     private func showError(_ message: String) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert(); alert.messageText = "ColdKey"; alert.informativeText = message; alert.runModal()

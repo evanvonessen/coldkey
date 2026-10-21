@@ -10,11 +10,13 @@ private final class MockHotKeys: HotKeyRegistering {
     var requests: [Request] = []
     var released: [EventHotKeyRef] = []
     var failingCodes: Set<UInt32> = []
+    var events: [String] = []
     func register(keyCode: UInt32, modifiers: UInt32, id: EventHotKeyID, options: OptionBits) -> (OSStatus, EventHotKeyRef?) {
+        events.append("reserve \(keyCode)")
         requests.append(Request(code: keyCode, modifiers: modifiers, id: id, options: options))
         return failingCodes.contains(keyCode) ? (OSStatus(eventHotKeyExistsErr), nil) : (noErr, EventHotKeyRef(bitPattern: Int(id.id)))
     }
-    func unregister(_ reference: EventHotKeyRef) { released.append(reference) }
+    func unregister(_ reference: EventHotKeyRef) { events.append("release \(Int(bitPattern: reference))"); released.append(reference) }
 }
 
 @MainActor
@@ -170,6 +172,96 @@ final class HotKeyManagerTests: XCTestCase {
         var duplicate = original; duplicate.id = UUID()
         XCTAssertNotNil(delegate.saveBinding(duplicate))
         XCTAssertEqual(backend.requests.count, requestCount)
+    }
+
+    func testFunctionRowRebindingReservesNewChordAndIgnoresReleasedChord() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = BindingStore(defaults: defaults)
+        let backend = MockHotKeys()
+        let manager = HotKeyManager(backend: backend, installHandler: false)
+        let delegate = AppDelegate(store: store, hotKeys: manager)
+        let original = Binding.functionRowDefault()
+        XCTAssertNil(delegate.saveBinding(original))
+        let old = try XCTUnwrap(backend.requests.last)
+        XCTAssertEqual(old.options, OptionBits(kEventHotKeyExclusive))
+        var updated = original
+        updated.keyCode = UInt32(kVK_ANSI_K); updated.keyLabel = "K"
+        updated.modifiers = UInt32(controlKey | optionKey)
+        XCTAssertNil(delegate.saveBinding(updated))
+        XCTAssertEqual(store.bindings, [updated])
+        XCTAssertEqual(backend.released.count, 1)
+        XCTAssertEqual(manager.registeredIDs, [original.id])
+        XCTAssertEqual(manager.handle(old.id, kind: down), OSStatus(eventNotHandledErr))
+        let current = try XCTUnwrap(backend.requests.last)
+        XCTAssertEqual(current.code, updated.keyCode)
+        XCTAssertEqual(current.modifiers, updated.modifiers)
+        XCTAssertEqual(current.options, OptionBits(kEventHotKeyExclusive))
+        var duplicate = updated; duplicate.id = UUID()
+        XCTAssertNotNil(delegate.saveBinding(duplicate))
+        var another = duplicate; another.keyCode = UInt32(kVK_F20)
+        XCTAssertNotNil(delegate.saveBinding(another))
+        XCTAssertEqual(store.bindings, [updated])
+    }
+
+    func testFailedFunctionRowRebindingKeepsOldStoredChordReserved() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = BindingStore(defaults: defaults)
+        let original = Binding.functionRowDefault()
+        try store.save([original])
+        let backend = MockHotKeys()
+        let manager = HotKeyManager(backend: backend, installHandler: false)
+        let delegate = AppDelegate(store: store, hotKeys: manager)
+        var updated = original; updated.keyCode = UInt32(kVK_F20); updated.keyLabel = "F20"
+        backend.failingCodes = [updated.keyCode]
+        XCTAssertNotNil(delegate.saveBinding(updated))
+        XCTAssertEqual(store.bindings, [original])
+        XCTAssertEqual(manager.registeredIDs, [original.id])
+        XCTAssertEqual(backend.requests.last?.code, original.keyCode)
+        XCTAssertEqual(backend.requests.last?.options, OptionBits(kEventHotKeyExclusive))
+    }
+
+    func testEditorKeepsReservedChordAndAcquiresReplacementBeforeReleasingOld() throws {
+        let backend = MockHotKeys()
+        let manager = HotKeyManager(backend: backend, installHandler: false)
+        let row = Binding.functionRowDefault(), app = binding()
+        XCTAssertTrue(manager.replace([row, app]).isEmpty)
+        let rowNumber = try XCTUnwrap(backend.requests.first).id.id
+        XCTAssertTrue(manager.replace([row]).isEmpty)
+        XCTAssertEqual(backend.requests.count, 2)
+        XCTAssertFalse(backend.released.contains(EventHotKeyRef(bitPattern: Int(rowNumber))!))
+        // Restoring the other shortcuts also retains the row's registration ID and held state.
+        XCTAssertTrue(manager.replace([row, app]).isEmpty)
+        XCTAssertEqual(backend.requests.filter { $0.code == row.keyCode }.count, 1)
+        var updated = row; updated.keyCode = UInt32(kVK_F20)
+        backend.failingCodes = [updated.keyCode]
+        XCTAssertFalse(manager.replace([updated, app]).isEmpty)
+        XCTAssertFalse(backend.released.contains(EventHotKeyRef(bitPattern: Int(rowNumber))!))
+        XCTAssertEqual(manager.registeredIDs, [row.id, app.id])
+        backend.failingCodes = []
+        backend.events = []
+        XCTAssertTrue(manager.replace([updated, app]).isEmpty)
+        XCTAssertEqual(backend.events, ["reserve \(updated.keyCode)", "release \(rowNumber)"])
+        XCTAssertEqual(manager.handle(EventHotKeyID(signature: HotKeyManager.signature, id: rowNumber), kind: down), OSStatus(eventNotHandledErr))
+    }
+
+    func testCarbonReleaseHookRunsOnceOnlyForOwnedHeldKey() throws {
+        let backend = MockHotKeys()
+        let manager = HotKeyManager(backend: backend, installHandler: false)
+        let binding = Binding.functionRowDefault()
+        XCTAssertTrue(manager.register([binding]).isEmpty)
+        let id = try XCTUnwrap(backend.requests.last).id
+        var released: [UUID] = []; manager.onRelease = { released.append($0) }
+        manager.handle(id, kind: up)
+        XCTAssertTrue(released.isEmpty)
+        manager.handle(id, kind: down)
+        manager.handle(id, kind: down)
+        manager.handle(id, kind: up)
+        manager.handle(id, kind: up)
+        XCTAssertEqual(released, [binding.id])
     }
 
     func testDeinitReleasesReservations() {

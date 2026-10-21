@@ -96,4 +96,61 @@ final class BindingTests: XCTestCase {
         XCTAssertFalse(decoded.closeFolderOnRepeat)
         XCTAssertFalse(decoded.closeFolderWhenNotFrontmost)
     }
+
+    func testFunctionRowShortcutHasDefaultNameAndChordWithoutAnApp() throws {
+        let binding = Binding.functionRowDefault()
+        XCTAssertEqual(binding.targetKind, .functionRow)
+        XCTAssertEqual(binding.name, "Toggle Function Row")
+        XCTAssertEqual(binding.shortcut, "⌘F12")
+        XCTAssertEqual(binding.keyCode, UInt32(kVK_F12))
+        XCTAssertEqual(binding.modifiers, UInt32(cmdKey))
+        XCTAssertTrue(binding.appPath.isEmpty)
+        XCTAssertEqual(try JSONDecoder().decode(Binding.self, from: JSONEncoder().encode(binding)), binding)
+    }
+
+    func testFunctionRowMigrationAddsDefaultOnlyOnceAndRespectsRemoval() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = BindingStore(defaults: defaults)
+        XCTAssertTrue(store.bindings.isEmpty, "Opening a store must not mutate it")
+        XCTAssertNil(try store.ensureFunctionRowShortcut())
+        XCTAssertEqual(store.bindings, [Binding.functionRowDefault()])
+        XCTAssertNil(try store.ensureFunctionRowShortcut())
+        XCTAssertEqual(store.bindings.count, 1)
+        try store.save([])
+        let reloaded = BindingStore(defaults: defaults)
+        XCTAssertNil(try reloaded.ensureFunctionRowShortcut())
+        XCTAssertTrue(reloaded.bindings.isEmpty)
+    }
+
+    func testFunctionRowMigrationPreservesExistingCommandF12Binding() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var existing = Binding.functionRowDefault()
+        existing.id = UUID(); existing.targetKind = .application; existing.appPath = "/Applications/Safari.app"
+        let store = BindingStore(defaults: defaults)
+        try store.save([existing])
+        let warning = try XCTUnwrap(store.ensureFunctionRowShortcut())
+        XCTAssertTrue(warning.contains("Safari"))
+        XCTAssertEqual(store.bindings, [existing])
+        try store.save([])
+        let reloaded = BindingStore(defaults: defaults)
+        XCTAssertNil(try reloaded.ensureFunctionRowShortcut())
+        XCTAssertTrue(reloaded.bindings.isEmpty, "Removing the old binding must not trigger a deferred default")
+    }
+
+    func testFunctionRowMigrationPreservesPreviouslyReboundToggle() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var existing = Binding.functionRowDefault()
+        existing.id = UUID(); existing.keyCode = UInt32(kVK_ANSI_K)
+        existing.modifiers = UInt32(controlKey | optionKey); existing.keyLabel = "K"
+        let store = BindingStore(defaults: defaults)
+        try store.save([existing])
+        XCTAssertNil(try store.ensureFunctionRowShortcut())
+        XCTAssertEqual(store.bindings, [existing])
+    }
 }

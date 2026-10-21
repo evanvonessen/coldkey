@@ -15,6 +15,11 @@ final class ShortcutEditorTests: XCTestCase {
         return view.subviews.lazy.compactMap { self.recorder(in: $0) }.first
     }
 
+    private func targetControl(in view: NSView) -> NSSegmentedControl? {
+        if let control = view as? NSSegmentedControl { return control }
+        return view.subviews.lazy.compactMap { self.targetControl(in: $0) }.first
+    }
+
     private func keyEvent(code: Int, modifiers: NSEvent.ModifierFlags = [], characters: String = "") throws -> NSEvent {
         try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers,
                                       timestamp: 0, windowNumber: 0, context: nil, characters: characters,
@@ -196,5 +201,104 @@ final class ShortcutEditorTests: XCTestCase {
                 XCTAssertEqual(result.hideWhenNotFrontmost, binding.hideWhenNotFrontmost)
             }
         }
+    }
+
+    func testFunctionRowEditorSavesWithoutTargetAndHidesAppAndFolderOptions() throws {
+        _ = NSApplication.shared
+        let original = Binding.functionRowDefault()
+        let editor = ShortcutEditor(binding: original)
+        defer { editor.close() }
+        let content = try XCTUnwrap(editor.window?.contentView)
+        content.layoutSubtreeIfNeeded()
+        XCTAssertEqual(try XCTUnwrap(targetControl(in: content)).selectedSegment, 2)
+        for title in ["Choose Application…", "Hide app when it is already in front", "Hide even when not frontmost",
+                      "Close folder window when it is already in front", "Close even when not frontmost"] {
+            XCTAssertTrue(try XCTUnwrap(button(title, in: content)).isHidden, title)
+        }
+        let recorder = try XCTUnwrap(recorder(in: content))
+        recorder.keyDown(with: try keyEvent(code: kVK_ANSI_K, modifiers: [.control, .option], characters: "k"))
+        var saved: Binding?
+        editor.onSave = { saved = $0; return nil }
+        try XCTUnwrap(button("Save", in: content)).performClick(nil)
+        let result = try XCTUnwrap(saved)
+        XCTAssertEqual(result.id, original.id)
+        XCTAssertEqual(result.targetKind, .functionRow)
+        XCTAssertTrue(result.appPath.isEmpty)
+        XCTAssertEqual(result.shortcut, "⌃⌥K")
+    }
+
+    func testNewEditorCanChooseFunctionRowAndRecordCommandF12() throws {
+        _ = NSApplication.shared
+        let editor = ShortcutEditor(binding: nil)
+        defer { editor.close() }
+        let content = try XCTUnwrap(editor.window?.contentView)
+        let control = try XCTUnwrap(targetControl(in: content))
+        control.selectedSegment = 2
+        NSApp.sendAction(try XCTUnwrap(control.action), to: control.target, from: control)
+        let recorder = try XCTUnwrap(recorder(in: content))
+        recorder.keyDown(with: try keyEvent(code: kVK_F12, modifiers: [.command, .function], characters: "\u{F70F}"))
+        var saved: Binding?
+        editor.onSave = { saved = $0; return nil }
+        try XCTUnwrap(button("Save", in: content)).performClick(nil)
+        let result = try XCTUnwrap(saved)
+        XCTAssertEqual(result.targetKind, .functionRow)
+        XCTAssertTrue(result.appPath.isEmpty)
+        XCTAssertEqual(result.shortcut, "⌘F12")
+    }
+
+    func testFunctionRowEditorRejectsKeysWithoutReliableMediaAliases() throws {
+        _ = NSApplication.shared
+        let editor = ShortcutEditor(binding: .functionRowDefault())
+        defer { editor.close() }
+        let content = try XCTUnwrap(editor.window?.contentView)
+        let recorder = try XCTUnwrap(recorder(in: content))
+        var saved: Binding?
+        editor.onSave = { saved = $0; return nil }
+        for code in [kVK_F3, kVK_F4, kVK_F5, kVK_F6] {
+            recorder.keyDown(with: try keyEvent(code: code, modifiers: [.command, .function]))
+            try XCTUnwrap(button("Save", in: content)).performClick(nil)
+            XCTAssertNil(saved)
+        }
+    }
+
+    func testReservedShortcutRecordsOnlyWhenRecorderHasFocus() throws {
+        _ = NSApplication.shared
+        let original = Binding.functionRowDefault()
+        let editor = ShortcutEditor(binding: original)
+        defer { editor.close() }
+        let content = try XCTUnwrap(editor.window?.contentView)
+        let recorder = try XCTUnwrap(recorder(in: content))
+        let window = try XCTUnwrap(editor.window)
+        window.makeFirstResponder(nil)
+        XCTAssertFalse(editor.recordReservedShortcut(original))
+        XCTAssertTrue(window.makeFirstResponder(recorder))
+        XCTAssertTrue(editor.recordReservedShortcut(original))
+        XCTAssertFalse(window.firstResponder === recorder)
+        XCTAssertEqual(recorder.title, "⌘F12")
+        var saved: Binding?
+        editor.onSave = { saved = $0; return nil }
+        try XCTUnwrap(button("Save", in: content)).performClick(nil)
+        XCTAssertEqual(saved, original)
+    }
+
+    func testEditorRecordsMediaModeCommandF12WhileRecorderHasFocus() throws {
+        _ = NSApplication.shared
+        let editor = ShortcutEditor(binding: .functionRowDefault())
+        defer { editor.close() }
+        let content = try XCTUnwrap(editor.window?.contentView)
+        let recorder = try XCTUnwrap(recorder(in: content))
+        let window = try XCTUnwrap(editor.window)
+        XCTAssertTrue(window.makeFirstResponder(recorder))
+        // NX_SYSDEFINED media event: sound-up (0), key-down (0xA), no repeat.
+        let mediaEvent = try XCTUnwrap(NSEvent.otherEvent(with: .systemDefined, location: .zero,
+            modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
+            context: nil, subtype: 8, data1: 0xA00, data2: -1))
+        window.sendEvent(mediaEvent)
+        XCTAssertEqual(recorder.title, "⌘F12")
+        XCTAssertFalse(window.firstResponder === recorder)
+        var saved: Binding?
+        editor.onSave = { saved = $0; return nil }
+        try XCTUnwrap(button("Save", in: content)).performClick(nil)
+        XCTAssertEqual(saved?.shortcut, "⌘F12")
     }
 }

@@ -4,7 +4,7 @@
 
 Supports Apple Silicon and Intel Macs running macOS 13 or later. No developer tools are needed to install it.
 
-The download above is **0.3.0 (4)**, with daily update checks and bare **F1–F20** shortcuts.
+The download above is **0.4.0 (5)**, with a changeable **⌘F12** function-row toggle, daily update checks, and bare **F1–F20** shortcuts.
 
 A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later.
 
@@ -13,17 +13,18 @@ A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later
 - Enable **Hide app when it is already in front** to toggle between showing and hiding it.
 - Or enable **Hide even when not frontmost** to hide a visible app even while another app is in front. Press again to show it. This separate option is off by default and works on its own or with the original option.
 - Launch apps from the menu, or edit/remove bindings under **Manage Shortcuts**.
+- **⌘F12** toggles between the top-row icon controls and standard F1–F12 keys. In **Settings…**, choose **Allow Function Row Shortcut…** and enable ColdKey in macOS **Privacy & Security → Accessibility**. Change the key under **Manage Shortcuts → Toggle Function Row → Edit…**, or choose **Function Row** when adding it. The chosen chord is reserved for this action across apps in both modes while ColdKey runs, including while the editor is open. Rebinding, removing it, or quitting releases the old chord. Clicking **Toggle Function Row** in the menu also switches modes. Only one function-row toggle is needed. If an existing ColdKey shortcut already uses ⌘F12, it is preserved and you can add the toggle with another key.
 - Open **Settings…** from the ⌘ menu for **Start at login**. It is off for a new installation and changes only when you click it. Run the signed app from `/Applications` or `~/Applications` before enabling it; development copies in `.build` cannot be enabled. A dash means macOS requires approval: choose **Open Login Items…** to approve it in System Settings, or clear the checkbox to cancel. The checkbox reads macOS’s saved status when Settings opens or ColdKey becomes active, including changes made in System Settings. Registration errors are shown without claiming the change succeeded.
 - **Check for updates** in Settings enables one background check per day and is on by default. Uncheck it to stop scheduled checks. **Check for Updates…** in the menu still works whenever you want. Available updates appear quietly as **Update Available…** in the menu; checking never downloads or installs a new app. Open the update and approve it to download and install. Settings also shows the centered **Evan Von Essen** credit at the bottom.
 - Choose **Folder** in the editor to bind a directory. **Close folder window when it is already in front** closes the matching window only when Finder is active and that exact window is in front; otherwise it brings the window forward. **Close even when not frontmost** also closes a matching window behind another app or Finder window. With both off, the shortcut opens or raises the folder. With both on, the second option takes precedence. If several windows match, only the frontmost matching window is affected. These actions close windows, never delete folders or hide Finder.
 
-Shortcuts are saved locally and restored on launch. They use exclusive native hotkey registration to take precedence over ordinary foreground-app shortcuts. Holding a shortcut triggers it once until you release the key. Existing shortcuts pause while the editor is open so you can record them. Conflicts are shown and prevent saving an unavailable shortcut; saved shortcuts that cannot register at launch are marked unavailable. macOS-reserved shortcuts, secure input, and shortcuts owned by another global tool can prevent registration or delivery. ColdKey cannot override those protections; choose another combination or release the shortcut in the other tool.
+Shortcuts are saved locally and restored on launch. They use exclusive native hotkey registration to take precedence over ordinary foreground-app shortcuts. Holding a shortcut triggers it once until you release the key. Application and folder shortcuts pause while the editor is open so you can record them. The function-row toggle remains reserved; clicking its recorder lets you capture the reserved chord without toggling. Conflicts are shown and prevent saving an unavailable shortcut; saved shortcuts that cannot register at launch are marked unavailable. macOS-reserved shortcuts, secure input, and shortcuts owned by another global tool can prevent registration or delivery. ColdKey cannot override those protections; choose another combination or release the shortcut in the other tool.
 
-Function-key shortcuts work for both applications and folders, with or without the existing Command, Option, and Control modifiers. If pressing F1 changes brightness instead, enable **System Settings → Keyboard → Keyboard Shortcuts → Function Keys → Use F1, F2, etc. keys as standard function keys** to use the function row without holding Fn. You can still hold Fn for the hardware controls. See [Apple's function-key instructions](https://support.apple.com/102439). ColdKey does not change your keyboard settings automatically.
+Function-key shortcuts work for both applications and folders, with or without the existing Command, Option, and Control modifiers. If pressing F1 changes brightness instead, enable **System Settings → Keyboard → Keyboard Shortcuts → Function Keys → Use F1, F2, etc. keys as standard function keys** to use the function row without holding Fn. You can still hold Fn for the hardware controls. See [Apple's function-key instructions](https://support.apple.com/102439). The Function Row action changes and saves this macOS setting only when you invoke it. Its default ⌘F12 recognizes both F12 and Volume Up events, so it can switch back from icon mode without holding Fn. The toggle supports F1, F2, F7–F20 and modified letters or other keys; F3–F6 are excluded for this action because their icon controls vary across Mac keyboards. Other app and folder shortcuts still support F1–F20.
 
 Both hide options apply to the whole app, including all its windows. Hidden apps are shown and activated; apps that are not running are launched. Existing shortcuts keep their previous hide setting when updating.
 
-Folder selections use saved bookmarks to follow moves and renames across restarts. If a folder is missing or inaccessible, choose it again. New folder shortcuts have both close options off. Existing folder shortcuts retain their behavior: the old close option migrates to **Close even when not frontmost**; old open-only shortcuts keep both off. The first folder action explains and requests macOS permission to control Finder; you can cancel or manage it in **System Settings → Privacy & Security → Automation**. No Accessibility permission is needed. Finder exposes a window's current folder, so a folder in an inactive tab is not treated as a matching window.
+Folder selections use saved bookmarks to follow moves and renames across restarts. If a folder is missing or inaccessible, choose it again. New folder shortcuts have both close options off. Existing folder shortcuts retain their behavior: the old close option migrates to **Close even when not frontmost**; old open-only shortcuts keep both off. The first folder action explains and requests macOS permission to control Finder; you can cancel or manage it in **System Settings → Privacy & Security → Automation**. App and folder shortcuts do not require Accessibility permission; the Function Row shortcut does. Finder exposes a window's current folder, so a folder in an inactive tab is not treated as a matching window.
 
 ## Install the packaged app
 
@@ -55,6 +56,8 @@ swift test
 python3 Tests/Packaging/test_notarization.py
 ```
 
+To check the live native function-row setting in both directions, run `Tests/FunctionRow/validate_mode.sh`. It temporarily changes the row mode twice and restores the exact original runtime setting and saved preference. It also checks native ⌘F12 exclusive registration in each mode. Event parsing, media aliases, repeats, and rebind reservations are covered by the Swift tests. Physical shortcut delivery across foreground apps requires enabling Accessibility for the signed ColdKey app.
+
 ## Build the DMG
 
 ```sh
@@ -63,7 +66,7 @@ python3 Tests/Packaging/test_notarization.py
 
 This builds an ad-hoc signed development installer from the current source for Apple Silicon and Intel. It checks the app signature and creates and verifies a compressed, read-only `dist/ColdKey.dmg` with a saved Finder icon layout, installation arrow, and Applications shortcut. Only the two drag-and-drop icons appear in the installer window. It also writes `dist/ColdKey.dmg.sha256`. For website releases, use the signing and notarization workflow below and commit the installer, checksum, and acceptance receipts.
 
-DMG creation also requires Python 3.9 or later. The first run installs pinned `dmgbuild` packaging tools into the ignored `.build/dmg-tools` environment; later runs reuse them. These are build tools only: the installed app contains no Python or third-party runtime dependencies. The script leaves the running app and installed copies alone.
+DMG creation also requires Python 3.9 or later. The first run installs pinned `dmgbuild` packaging tools into the ignored `.build/dmg-tools` environment; later runs reuse them. These are build tools only: the installed app contains no Python runtime. The script leaves the running app and installed copies alone.
 
 ## Sign and notarize a website release
 
@@ -109,12 +112,12 @@ ColdKey uses pinned [Sparkle 2.10.0](https://sparkle-project.org/) for update ve
 After increasing the app version and build number in `scripts/build-app.sh`, build and notarize the DMG using the workflow above, then prepare the signed feed and versioned release asset:
 
 ```sh
-./scripts/prepare-update.sh 0.3.0
+./scripts/prepare-update.sh 0.4.0
 ```
 
-Commit the source, installer, checksum, approval receipts, and signed `updates/appcast.xml`. Publish a GitHub release tagged `v0.3.0` at that commit with `.build/update-v0.3.0/ColdKey-0.3.0.dmg` and its checksum as assets. Keep versioned assets unchanged once published. Publish the assets before advancing `main` to the new feed so the download already exists. Use the new version number in these paths for later releases. Re-run the preparation script after any change to the installer or appcast; editing the signed XML invalidates its signature.
+Commit the source, installer, checksum, approval receipts, and signed `updates/appcast.xml`. Publish a GitHub release tagged `v0.4.0` at that commit with `.build/update-v0.4.0/ColdKey-0.4.0.dmg` and its checksum as assets. Keep versioned assets unchanged once published. Publish the assets before advancing `main` to the new feed so the download already exists. Use the new version number in these paths for later releases. Re-run the preparation script after any change to the installer or appcast; editing the signed XML invalidates its signature.
 
-Version 0.2.0 and earlier need one manual installation of 0.3.0 to gain the updater. Future updates preserve your settings and shortcuts. Downloads and installation always require approval; automatic installation and system profiling are disabled. The checkbox controls only scheduled checks and its value persists across launches.
+Version 0.2.0 and earlier need one manual installation of 0.3.0 or later to gain the updater. Future updates preserve your settings and shortcuts. Downloads and installation always require approval; automatic installation and system profiling are disabled. The checkbox controls only scheduled checks and its value persists across launches.
 
 For native update integration tests on disposable app copies, use an extracted, signed app:
 
@@ -126,4 +129,4 @@ This requires the local Developer ID certificate and ColdKey update signing key 
 
 ## Small by design
 
-AppKit controls, Carbon system hotkey registration, and NSWorkspace app activation. Sparkle is the only runtime dependency; optional sandbox XPC services and development headers are omitted from the packaged framework. Update checks use Sparkle's daily scheduler, with no custom polling or always-running updater service. Release-note web views and system profiling are disabled. No Accessibility permission, Dock icon, or window at launch. Bindings live in UserDefaults under the app's bundle identifier when running the app bundle. Sparkle's license and bundled notices are included in the app's Resources folder.
+AppKit controls, Carbon system hotkey registration, NSWorkspace app activation, and public IOKit function-key settings. The function-row shortcut uses one event-driven keyboard filter in the existing process, with no polling; unrelated events pass through. Sparkle is the only runtime dependency; optional sandbox XPC services and development headers are omitted from the packaged framework. Update checks use Sparkle's daily scheduler, with no custom polling or always-running updater service. Release-note web views and system profiling are disabled. Accessibility is requested only for reserving the function-row shortcut in both modes. No Dock icon or window at launch. Bindings live in UserDefaults under the app's bundle identifier when running the app bundle. Sparkle's license and bundled notices are included in the app's Resources folder.

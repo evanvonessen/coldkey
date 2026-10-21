@@ -20,13 +20,19 @@ final class HotKeyManager {
     // Carbon registration and dispatch run on the main thread. Never reuse an ID after rebinding.
     private static var nextIdentifier: UInt32 = 1
     private let backend: HotKeyRegistering
-    private var references: [EventHotKeyRef] = []
+    private struct Registration {
+        let binding: Binding
+        let number: UInt32
+        let reference: EventHotKeyRef
+    }
+    private var registrations: [Registration] = []
     private var handler: EventHandlerRef?
     private var handlerStatus: OSStatus = noErr
     private var actions: [UInt32: UUID] = [:]
     private var pressed: Set<UInt32> = []
     var registeredIDs: Set<UUID> { Set(actions.values) }
     var onPress: ((UUID) -> Void)?
+    var onRelease: ((UUID) -> Void)?
 
     init(backend: HotKeyRegistering = CarbonHotKeyRegistration(), installHandler: Bool = true) {
         self.backend = backend
@@ -52,22 +58,41 @@ final class HotKeyManager {
         case UInt32(kEventHotKeyPressed):
             if pressed.insert(key.id).inserted { onPress?(id) }
         case UInt32(kEventHotKeyReleased):
-            pressed.remove(key.id)
+            if pressed.remove(key.id) != nil { onRelease?(id) }
         default: return OSStatus(eventNotHandledErr)
         }
         return noErr
     }
 
     func unregister() {
-        references.forEach { backend.unregister($0) }
-        references.removeAll(); actions.removeAll(); pressed.removeAll()
+        registrations.forEach { backend.unregister($0.reference) }
+        registrations.removeAll(); actions.removeAll(); pressed.removeAll()
     }
 
     func register(_ bindings: [Binding]) -> [String] {
         unregister()
+        var failures: [String] = []
+        for binding in bindings { failures += replace(registrations.map(\.binding) + [binding]) }
+        return failures
+    }
+
+    // Reserve replacements before releasing old keys. Failed changes leave every old reservation intact.
+    func replace(_ bindings: [Binding]) -> [String] {
         guard handlerStatus == noErr else { return ["ColdKey could not listen for shortcuts (\(handlerStatus)). Restart the app and try again."] }
         var failures: [String] = []
+        var desired: [Registration] = []
+        var acquired: [Registration] = []
+        var identifiers = Set<UUID>()
         for binding in bindings {
+            guard identifiers.insert(binding.id).inserted else {
+                failures.append("Duplicate shortcut. Remove the duplicate and try again."); continue
+            }
+            if let existing = registrations.first(where: {
+                $0.binding.id == binding.id && $0.binding.keyCode == binding.keyCode && $0.binding.modifiers == binding.modifiers
+            }) {
+                desired.append(Registration(binding: binding, number: existing.number, reference: existing.reference))
+                continue
+            }
             guard ShortcutKey.isValid(keyCode: binding.keyCode, modifiers: binding.modifiers) else {
                 failures.append("\(binding.name): choose F1–F20 alone, or Command, Option, or Control with one non-modifier key.")
                 continue
@@ -81,13 +106,23 @@ final class HotKeyManager {
                                                       id: EventHotKeyID(signature: Self.signature, id: number),
                                                       options: OptionBits(kEventHotKeyExclusive))
             if status == noErr, let reference {
-                references.append(reference); actions[number] = binding.id
+                let registration = Registration(binding: binding, number: number, reference: reference)
+                acquired.append(registration); desired.append(registration)
             } else {
                 if let reference { backend.unregister(reference) }
                 failures.append("\(binding.name): \(binding.shortcut) could not be reserved exclusively (\(status)). Choose another shortcut or release it in the other app.")
             }
         }
-        return failures
+        guard failures.isEmpty else {
+            acquired.forEach { backend.unregister($0.reference) }
+            return failures
+        }
+        let retained = Set(desired.map(\.number))
+        registrations.filter { !retained.contains($0.number) }.forEach { backend.unregister($0.reference) }
+        registrations = desired
+        actions = Dictionary(uniqueKeysWithValues: desired.map { ($0.number, $0.binding.id) })
+        pressed.formIntersection(retained)
+        return []
     }
 
     deinit {
