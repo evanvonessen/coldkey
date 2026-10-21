@@ -1,0 +1,22 @@
+<?xml version="1.0" standalone="yes"?>
+<!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>ColdKey</title>
+        <item>
+            <title>0.3.0</title>
+            <pubDate>Wed, 21 Oct 2026 01:29:05 -0700</pubDate>
+            <link>https://github.com/evanvonessen/coldkey</link>
+            <sparkle:version>4</sparkle:version>
+            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/evanvonessen/coldkey/releases/download/v0.3.0/ColdKey-0.3.0.dmg" length="1631499" type="application/octet-stream" sparkle:edSignature="7DxJXtsYGNTnEjfw0ms+1srntpqqwdNft3gr8Ch2g/t+XNc5nRdrGM6upwFXUu7JxTTT7Z4elYlO3NU7jAH2AA=="/>
+        </item>
+    </channel>
+</rss>
+<!-- sparkle-signatures:
+edSignature: ut2m9/24K+tqkIciqadLmRJjHx/J2yyacYxpEhgSuV+E0iMhcupEJOmY4oCcfzaxlvJtS+q8BVL/5lACglVTDA==
+length: 1099
+-->

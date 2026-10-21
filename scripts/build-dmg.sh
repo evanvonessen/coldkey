@@ -46,9 +46,9 @@ import hashlib
 from pathlib import Path
 
 paths = list(Path("Sources").rglob("*.swift")) + [Path(name) for name in (
-    "Package.swift", "Assets/hotkey-original.png", "scripts/build-app.sh",
+    "Package.swift", "Package.resolved", "Assets/hotkey-original.png", "scripts/build-app.sh",
     "scripts/ColdKey.entitlements", "scripts/build-dmg.sh",
-    "scripts/dmg-settings.py", "scripts/requirements-dmg.txt",
+    "scripts/dmg-settings.py", "scripts/requirements-dmg.txt", "scripts/update-public-key.txt",
 )]
 digest = hashlib.sha256()
 for path in sorted(paths):
@@ -174,7 +174,7 @@ fi
 for ARCH in arm64 x86_64; do
     lipo "$APP/Contents/MacOS/Coldkey" -verify_arch "$ARCH"
 done
-codesign --verify --strict --all-architectures "$APP"
+codesign --verify --deep --strict --all-architectures "$APP"
 
 if [[ "$NOTARIZE" == "1" ]]; then
     if [[ "$RESUME" == "0" ]]; then
@@ -194,7 +194,7 @@ PY
     check_submission "$STAGING/ColdKey.zip" "$STAGING/app-notarization.json"
     xcrun stapler staple "$APP"
     xcrun stapler validate "$APP"
-    codesign --verify --strict --all-architectures "$APP"
+    codesign --verify --deep --strict --all-architectures "$APP"
     if command -v syspolicy_check >/dev/null; then
         syspolicy_check distribution "$APP" --verbose > "$STAGING/distribution-check.txt" 2>&1 || {
             cat "$STAGING/distribution-check.txt" >&2; exit 1;
@@ -226,7 +226,7 @@ hdiutil verify "$STAGING/ColdKey.dmg"
 mkdir -p "$STAGING/verify"
 hdiutil attach -readonly -nobrowse -mountpoint "$STAGING/verify" "$STAGING/ColdKey.dmg" >/dev/null
 VERIFY_MOUNT="$STAGING/verify"
-codesign --verify --strict --all-architectures "$VERIFY_MOUNT/ColdKey.app"
+codesign --verify --deep --strict --all-architectures "$VERIFY_MOUNT/ColdKey.app"
 if [[ "$NOTARIZE" == "1" ]]; then
     xcrun stapler validate "$VERIFY_MOUNT/ColdKey.app"
     spctl --assess --type execute --verbose=2 "$VERIFY_MOUNT/ColdKey.app"

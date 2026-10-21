@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var folderActionInProgress = false
     private var editor: ShortcutEditor?
     private var settings: LoginSettingsWindow?
+    private lazy var updates = UpdateController()
     private var failures: [String] = []
     init(store: BindingStore = BindingStore(), hotKeys: HotKeyManager = HotKeyManager()) {
         self.store = store; self.hotKeys = hotKeys
@@ -20,6 +21,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.toolTip = "ColdKey"
         hotKeys.onPress = { [weak self] id in self?.launch(id) }
         restoreShortcuts()
+        updates.onChange = { [weak self] in
+            self?.rebuildMenu()
+            self?.settings?.refresh()
+        }
+        updates.start()
     }
     private func restoreShortcuts() {
         failures = hotKeys.register(store.bindings)
@@ -60,6 +66,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         let preferences = menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         preferences.target = self
+        let update = menu.addItem(withTitle: updates.updateAvailable ? "Update Available…" : "Check for Updates…", action: #selector(UpdateController.checkForUpdates(_:)), keyEquivalent: "")
+        update.target = updates
         let quit = menu.addItem(withTitle: "Quit ColdKey", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); quit.target = NSApp
         statusItem.menu = menu
     }
@@ -156,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     @objc private func showFailures() { showError(failures.joined(separator: "\n")) }
     @objc private func openSettings() {
-        let controller = settings ?? LoginSettingsWindow()
+        let controller = settings ?? LoginSettingsWindow(updates: updates)
         settings = controller
         controller.refresh()
         controller.showWindow(nil)

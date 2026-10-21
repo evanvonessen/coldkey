@@ -4,7 +4,7 @@
 
 Supports Apple Silicon and Intel Macs running macOS 13 or later. No developer tools are needed to install it.
 
-The download above is **0.2.0 (3)**, including bare **F1–F20** shortcuts.
+The download above is **0.3.0 (4)**, with daily update checks and bare **F1–F20** shortcuts.
 
 A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later.
 
@@ -14,6 +14,7 @@ A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later
 - Or enable **Hide even when not frontmost** to hide a visible app even while another app is in front. Press again to show it. This separate option is off by default and works on its own or with the original option.
 - Launch apps from the menu, or edit/remove bindings under **Manage Shortcuts**.
 - Open **Settings…** from the ⌘ menu for **Start at login**. It is off for a new installation and changes only when you click it. Run the signed app from `/Applications` or `~/Applications` before enabling it; development copies in `.build` cannot be enabled. A dash means macOS requires approval: choose **Open Login Items…** to approve it in System Settings, or clear the checkbox to cancel. The checkbox reads macOS’s saved status when Settings opens or ColdKey becomes active, including changes made in System Settings. Registration errors are shown without claiming the change succeeded.
+- **Check for updates** in Settings enables one background check per day and is on by default. Uncheck it to stop scheduled checks. **Check for Updates…** in the menu still works whenever you want. Available updates appear quietly as **Update Available…** in the menu; checking never downloads or installs a new app. Open the update and approve it to download and install. Settings also shows the centered **Evan Von Essen** credit at the bottom.
 - Choose **Folder** in the editor to bind a directory. **Close folder window when it is already in front** closes the matching window only when Finder is active and that exact window is in front; otherwise it brings the window forward. **Close even when not frontmost** also closes a matching window behind another app or Finder window. With both off, the shortcut opens or raises the folder. With both on, the second option takes precedence. If several windows match, only the frontmost matching window is affected. These actions close windows, never delete folders or hide Finder.
 
 Shortcuts are saved locally and restored on launch. They use exclusive native hotkey registration to take precedence over ordinary foreground-app shortcuts. Holding a shortcut triggers it once until you release the key. Existing shortcuts pause while the editor is open so you can record them. Conflicts are shown and prevent saving an unavailable shortcut; saved shortcuts that cannot register at launch are marked unavailable. macOS-reserved shortcuts, secure input, and shortcuts owned by another global tool can prevent registration or delivery. ColdKey cannot override those protections; choose another combination or release the shortcut in the other tool.
@@ -28,7 +29,7 @@ Folder selections use saved bookmarks to follow moves and renames across restart
 
 Quit any running ColdKey and double-click the DMG. It opens a compact installer window with the original ColdKey icon on the left, an arrow, and Applications on the right. Drag **ColdKey** onto **Applications**, then eject the disk and open ColdKey from Applications. Look for **⌘** in the menu bar. Updating keeps your saved shortcuts.
 
-Upload `dist/ColdKey.dmg` to your website and link directly to that file. Visitors download and open the DMG; they do not need GitHub access, source files, or developer tools. This repository is private, so its GitHub download link requires repository access.
+Upload `dist/ColdKey.dmg` to your website and link directly to that file. Visitors download and open the DMG; they do not need source files or developer tools. The repository, update feed, and release downloads are public and require no credentials in the installed app.
 
 **Signed and notarized by Apple.** Both the app and DMG include validated Apple approval tickets. This release should not require **Open Anyway**; macOS may still display its normal first-open confirmation for an app downloaded from the internet.
 
@@ -101,6 +102,28 @@ Pending or unsuccessful submissions leave the previous installer in place. Start
 
 A notarized release should not require **Open Anyway**; macOS may still display its normal first-open confirmation for an app downloaded from the internet.
 
+## Publish an app update
+
+ColdKey uses pinned [Sparkle 2.10.0](https://sparkle-project.org/) for update verification and installation. It checks the signed [appcast](updates/appcast.xml) over HTTPS once per day while running. Both the feed and update archive are signed with ColdKey's Ed25519 key; the private key is stored in Keychain under account `com.evanvonessen.coldkey`. Only its public key is in [scripts/update-public-key.txt](scripts/update-public-key.txt). Preserve this Keychain key for future releases; do not generate a replacement casually.
+
+After increasing the app version and build number in `scripts/build-app.sh`, build and notarize the DMG using the workflow above, then prepare the signed feed and versioned release asset:
+
+```sh
+./scripts/prepare-update.sh 0.3.0
+```
+
+Commit the source, installer, checksum, approval receipts, and signed `updates/appcast.xml`. Publish a GitHub release tagged `v0.3.0` at that commit with `.build/update-v0.3.0/ColdKey-0.3.0.dmg` and its checksum as assets. Keep versioned assets unchanged once published. Publish the assets before advancing `main` to the new feed so the download already exists. Use the new version number in these paths for later releases. Re-run the preparation script after any change to the installer or appcast; editing the signed XML invalidates its signature.
+
+Version 0.2.0 and earlier need one manual installation of 0.3.0 to gain the updater. Future updates preserve your settings and shortcuts. Downloads and installation always require approval; automatic installation and system profiling are disabled. The checkbox controls only scheduled checks and its value persists across launches.
+
+For native update integration tests on disposable app copies, use an extracted, signed app:
+
+```sh
+python3 Tests/Updater/validate_update.py /path/to/extracted/ColdKey.app
+```
+
+This requires the local Developer ID certificate and ColdKey update signing key in Keychain. The tests use a loopback server, isolated preferences, and disposable copies under `.build/update-validation`; they never replace an installed app. They cover declining without downloading, manual checking with scheduled checks off, approval and installation, preference persistence, and rejection of tampered feeds and invalid archive signatures.
+
 ## Small by design
 
-AppKit controls, Carbon system hotkey registration, and NSWorkspace app activation. No third-party dependencies, web views, polling, network calls, Accessibility permission, or background service. No Dock icon or window at launch. Bindings live in UserDefaults under the app's bundle identifier when running the app bundle.
+AppKit controls, Carbon system hotkey registration, and NSWorkspace app activation. Sparkle is the only runtime dependency; optional sandbox XPC services and development headers are omitted from the packaged framework. Update checks use Sparkle's daily scheduler, with no custom polling or always-running updater service. Release-note web views and system profiling are disabled. No Accessibility permission, Dock icon, or window at launch. Bindings live in UserDefaults under the app's bundle identifier when running the app bundle. Sparkle's license and bundled notices are included in the app's Resources folder.

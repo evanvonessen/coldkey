@@ -57,9 +57,10 @@ class NotarizationWorkflowTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         for name in ("scripts", "Sources", "Assets", "dist", "bin", ".build/dmg-tools/bin"):
             (self.root / name).mkdir(parents=True)
-        for name in ("build-dmg.sh", "ColdKey.entitlements", "dmg-settings.py", "requirements-dmg.txt"):
+        for name in ("build-dmg.sh", "ColdKey.entitlements", "dmg-settings.py", "requirements-dmg.txt", "update-public-key.txt"):
             shutil.copy2(ROOT / "scripts" / name, self.root / "scripts" / name)
         (self.root / "Package.swift").write_text("// test input\n")
+        (self.root / "Package.resolved").write_text('{"pins": []}\n')
         (self.root / "Sources/main.swift").write_text("// test app\n")
         (self.root / "Assets/hotkey-original.png").write_bytes(b"test icon")
         build = self.root / "scripts/build-app.sh"
