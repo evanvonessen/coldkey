@@ -4,7 +4,7 @@
 
 Supports Apple Silicon and Intel Macs running macOS 13 or later. No developer tools are needed to install it.
 
-The download above is the notarized **0.1.0 (2)** release. Source **0.2.0 (3)** adds bare F1–F20 shortcuts; its updated installer is awaiting Apple notarization after the release credentials are refreshed.
+The download above is **0.2.0 (3)**, including bare **F1–F20** shortcuts.
 
 A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later.
 
@@ -75,6 +75,15 @@ xcrun notarytool store-credentials ColdKey
 ```
 
 Use your Apple Developer account, its team ID, and an app-specific password generated at [Apple Account](https://account.apple.com/). Enter the password only at the secure Terminal prompt; do not put it in source files, environment variables, or Git.
+
+Alternatively, save a downloaded Team API key in the same Keychain profile:
+
+```sh
+xcrun notarytool store-credentials ColdKey \
+  --key /path/to/AuthKey_KEY_ID.p8 --key-id KEY_ID --issuer ISSUER_ID
+```
+
+Keep the private `.p8` file outside the repository. The release script uses the saved profile for either authentication method.
 
 ```sh
 COLDKEY_NOTARY_PROFILE=ColdKey ./scripts/build-dmg.sh --notarize
