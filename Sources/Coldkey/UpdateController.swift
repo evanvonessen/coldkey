@@ -4,14 +4,17 @@ import Sparkle
 protocol UpdateChecking: AnyObject {
     var automaticallyChecksForUpdates: Bool { get set }
     var isAvailable: Bool { get }
+    var canCheckForUpdates: Bool { get }
+    func checkForUpdates(_ sender: Any?)
     var message: String { get }
 }
 
-final class UpdateController: NSObject, UpdateChecking, NSMenuItemValidation, SPUStandardUserDriverDelegate {
+final class UpdateController: NSObject, UpdateChecking, SPUStandardUserDriverDelegate {
     private lazy var controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: self)
     private(set) var isAvailable = false
     private(set) var updateAvailable = false
     private var startupError: String?
+    private var availabilityObservation: NSKeyValueObservation?
     var onChange: (() -> Void)?
 
     func start() {
@@ -23,6 +26,9 @@ final class UpdateController: NSObject, UpdateChecking, NSMenuItemValidation, SP
         do {
             try controller.updater.start()
             isAvailable = true
+            availabilityObservation = controller.updater.observe(\.canCheckForUpdates) { [weak self] _, _ in
+                DispatchQueue.main.async { [weak self] in self?.onChange?() }
+            }
         } catch {
             startupError = "Updates are unavailable: \(error.localizedDescription)"
         }
@@ -49,11 +55,9 @@ final class UpdateController: NSObject, UpdateChecking, NSMenuItemValidation, SP
         controller.checkForUpdates(sender)
     }
 
-    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        isAvailable && controller.updater.canCheckForUpdates
-    }
+    var canCheckForUpdates: Bool { isAvailable && controller.updater.canCheckForUpdates }
 
-    // A scheduled check adds a quiet menu reminder; it never steals focus or downloads an update.
+    // Scheduled checks stay quiet; the Settings button opens any pending update.
     var supportsGentleScheduledUpdateReminders: Bool { true }
 
     func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {

@@ -5,6 +5,10 @@ import XCTest
 private final class FakeUpdateSettings: UpdateChecking {
     var automaticallyChecksForUpdates = true { didSet { changes += 1 } }
     var isAvailable = true
+    var idle = true
+    var canCheckForUpdates: Bool { isAvailable && idle }
+    var checks = 0
+    func checkForUpdates(_ sender: Any?) { if canCheckForUpdates { checks += 1 } }
     var message = "Checks once a day. Downloads and installation require your approval."
     var changes = 0
 }
@@ -39,6 +43,18 @@ final class UpdateSettingsTests: XCTestCase {
         XCTAssertEqual(checkbox.state, .off)
         settings.refresh()
         XCTAssertEqual(updates.changes, 1)
+        let check = try XCTUnwrap(controls(NSButton.self, in: content).first { $0.title == "Check for Updates" })
+        XCTAssertTrue(check.isEnabled)
+        check.performClick(nil)
+        XCTAssertEqual(updates.checks, 1)
+        XCTAssertFalse(updates.automaticallyChecksForUpdates)
+        XCTAssertEqual(updates.changes, 1)
+        updates.idle = false
+        settings.refresh()
+        XCTAssertFalse(check.isEnabled)
+        updates.idle = true
+        settings.refresh()
+        XCTAssertTrue(check.isEnabled)
         let reopened = LoginSettingsWindow(updates: updates)
         defer { reopened.close() }
         let reopenedContent = try XCTUnwrap(reopened.window?.contentView)
@@ -59,6 +75,7 @@ final class UpdateSettingsTests: XCTestCase {
         content.layoutSubtreeIfNeeded()
         let checkbox = try XCTUnwrap(controls(NSButton.self, in: content).first { $0.title == "Check for updates" })
         XCTAssertFalse(checkbox.isEnabled)
+        XCTAssertFalse(try XCTUnwrap(controls(NSButton.self, in: content).first { $0.title == "Check for Updates" }).isEnabled)
         let labels = controls(NSTextField.self, in: content)
         XCTAssertEqual(labels.map(\.stringValue), ["Evan Von Essen"])
         let credit = try XCTUnwrap(labels.first { $0.stringValue == "Evan Von Essen" })

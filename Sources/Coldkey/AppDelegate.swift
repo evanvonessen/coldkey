@@ -105,8 +105,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         let preferences = menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         preferences.target = self
-        let update = menu.addItem(withTitle: updates.updateAvailable ? "Update Available…" : "Check for Updates…", action: #selector(UpdateController.checkForUpdates(_:)), keyEquivalent: "")
-        update.target = updates
         let quit = menu.addItem(withTitle: "Quit ColdKey", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); quit.target = NSApp
         statusItem.menu = menu
     }

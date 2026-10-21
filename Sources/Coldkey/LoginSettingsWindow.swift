@@ -5,6 +5,7 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
     private let checkbox = NSButton(checkboxWithTitle: "Start at login", target: nil, action: nil)
     private let updates: UpdateChecking?
     private let updateCheckbox = NSButton(checkboxWithTitle: "Check for updates", target: nil, action: nil)
+    private let updateButton = NSButton(title: "Check for Updates", target: nil, action: nil)
     private let functionRowStatus: (() -> (active: Bool, permitted: Bool))?
     private let requestFunctionRowPermission: () -> Void
     private let openAccessibilitySettings: () -> Void
@@ -39,6 +40,9 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
         settings.bezelStyle = .rounded
         updateCheckbox.target = self
         updateCheckbox.action = #selector(toggleUpdates)
+        updateButton.target = self
+        updateButton.action = #selector(checkForUpdates)
+        updateButton.bezelStyle = .rounded
         functionRowButton.target = self
         functionRowButton.action = #selector(allowFunctionRowShortcut)
         functionRowButton.bezelStyle = .rounded
@@ -47,7 +51,7 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
         credit.textColor = .secondaryLabelColor
         credit.alignment = .center
         credit.translatesAutoresizingMaskIntoConstraints = false
-        var controls: [NSView] = [checkbox, settings, updateCheckbox]
+        var controls: [NSView] = [checkbox, settings, updateCheckbox, updateButton]
         if self.functionRowStatus != nil { controls += [functionRowButton] }
         let stack = NSStackView(views: controls)
         stack.orientation = .vertical
@@ -81,6 +85,7 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
         checkbox.isEnabled = loginItem.canToggle
         updateCheckbox.state = updates?.automaticallyChecksForUpdates == true ? .on : .off
         updateCheckbox.isEnabled = updates?.isAvailable == true
+        updateButton.isEnabled = updates?.canCheckForUpdates == true
         if let status = functionRowStatus?() {
             functionRowButton.title = status.permitted ? "Open Accessibility Settings…" : "Allow Function Row Shortcut…"
         }
@@ -102,6 +107,11 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
 
     @objc private func toggleUpdates() {
         updates?.automaticallyChecksForUpdates = updateCheckbox.state == .on
+        refresh()
+    }
+
+    @objc private func checkForUpdates() {
+        updates?.checkForUpdates(updateButton)
         refresh()
     }
 

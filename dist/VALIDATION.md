@@ -1,18 +1,18 @@
 # Packaged ColdKey validation
 
-Validated on October 21, 2026. Release **0.4.1 (6)** removes explanatory paragraphs and the update tooltip from Settings. The existing buttons, checkbox labels, behavior, window dimensions, and centered gray **Evan Von Essen** credit are preserved. Bundle identifier: `com.evanvonessen.coldkey`.
+Validated on October 21, 2026. Release **0.4.2 (7)** moves the manual update action from the menu into Settings as a **Check for Updates** button. The daily-check checkbox stays separate. Existing buttons, labels, behavior, and the centered gray **Evan Von Essen** credit remain, with no explanatory paragraphs. Bundle identifier: `com.evanvonessen.coldkey`.
 
-- PASS: `swift test` — 105 tests total, 104 passed, one skipped, zero failures. Existing Settings tests verify the original controls, callbacks, checkbox state, layout, and the credit as the only text field. One native bare-F1 reservation test skipped because the chord was already reserved (`-9878`); it did not release another app's shortcut.
+- PASS: `swift test` — 105 tests total, 104 passed, one skipped, zero failures. Settings tests verify that clicking the new button dispatches a manual check with daily checks off, does not change that preference, and reflects updater availability. Controls, callbacks, layout, and the credit as the only text field remain covered. The native bare-F1 reservation test skipped because the chord was already reserved (`-9878`).
 - PASS: `python3 Tests/Packaging/test_notarization.py` — five release checkpoint tests.
-- PASS: signed app startup and accessory activation policy. The exact approved archive was used for the packaged app.
+- PASS: signed app startup, native updater initialization, and accessory activation policy on a disposable copy. Installed copies and release staging were preserved.
 - PASS: universal executable (`arm64` and `x86_64`), both declaring macOS 13.0 as minimum.
 - PASS: strict deep signature verification across architectures, app and DMG ticket validation, read-only image verification and mounting, and Gatekeeper assessment as **Notarized Developer ID**.
-- PASS: Apple accepted app submission `fd9d43bd-2a53-4a2d-b7e7-2c954609f8a0`; [app receipt](ColdKey.dmg.app-notarization.json).
-- PASS: Apple accepted DMG submission `6ffdbdaa-9c67-44af-b6cb-cf52e09120f4`; [DMG receipt](ColdKey.dmg.notarization.json). Both approval tickets are stapled and validated. Each archive was submitted once.
-- PASS: signed update feed prepared and verified with the existing ColdKey Ed25519 key; versioned release asset matches the final DMG. Private signing credentials remain in Keychain.
+- PASS: Apple accepted app submission `5e3c8bc5-6c6a-41fd-aa1c-707088d6cfbe`; [app receipt](ColdKey.dmg.app-notarization.json).
+- PASS: Apple accepted DMG submission `2cc955db-69e9-4b20-9108-ff5b8afdc737`; [DMG receipt](ColdKey.dmg.notarization.json). Both approval tickets are stapled and validated. Each archive was submitted once.
+- PASS: signed update feed prepared and verified with the existing ColdKey Ed25519 key; the versioned release asset matches the final DMG. Private signing credentials remain in Keychain.
 - PASS: checksum verification, shell syntax, and `git diff --check`.
-- NOT RUN for this Settings-only release: physical shortcut delivery, native mode switching, update installation, an actual Accessibility grant/revocation, Intel hardware, macOS 13 runtime, login/reboot, quarantined first installation, or a 24-hour update wait. The mode controller, shortcut filter, updater, and packaging scripts are unchanged. Native mode/registration checks and five signed-update scenarios were recorded for [0.4.0](https://github.com/evanvonessen/coldkey/blob/v0.4.0/dist/VALIDATION.md).
+- NOT RUN for this release: a full update installation through the Settings button, physical shortcut delivery, native mode switching, actual Accessibility grant/revocation, Intel hardware, macOS 13 runtime, login/reboot, quarantined first installation, or a 24-hour update wait. Native mode/registration checks and five signed-update scenarios were recorded for [0.4.0](https://github.com/evanvonessen/coldkey/blob/v0.4.0/dist/VALIDATION.md). Sparkle, its signed update verification, and installation configuration are unchanged.
 
-The compressed installer is **1,691,991 bytes**. Sparkle 2.10.0 remains the sole runtime dependency. Its license and bundled notices are in `Contents/Resources/Sparkle-LICENSE.txt`. The installer background comes from dmgbuild 1.6.7, with its MIT license in `.licenses/dmgbuild.txt`. Python packaging tools are build-time only.
+The compressed installer is **1,694,012 bytes**. Sparkle 2.10.0 remains the sole runtime dependency. Button availability follows Sparkle's KVO-compliant property without polling. Licenses remain included in the app and DMG; Python packaging tools are build-time only.
 
-Installer SHA-256: `57814182ae199704ba4733b48422ff388274230f78e85156a300bea28ea9697f`.
+Installer SHA-256: `dd2d8c4f87dab41a640785ca2d92b46bfd28619bed424bff05a00d960bb9d2bd`.
