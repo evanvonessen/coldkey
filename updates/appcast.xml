@@ -6,6 +6,15 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>ColdKey</title>
         <item>
+            <title>0.4.3</title>
+            <pubDate>Wed, 21 Oct 2026 03:43:24 -0700</pubDate>
+            <link>https://github.com/evanvonessen/coldkey</link>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>0.4.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/evanvonessen/coldkey/releases/download/v0.4.3/ColdKey-0.4.3.dmg" length="1694164" type="application/octet-stream" sparkle:edSignature="D9D3XR3pMTkdHfTr7GMfnot7d0n3z8Vq9Yat7OO8vKF5hRl9+sIG7KVmTNikeBzTvfRcfUu5ZKgsKwP9rbaUCA=="/>
+        </item>
+        <item>
             <title>0.4.2</title>
             <pubDate>Wed, 21 Oct 2026 03:36:56 -0700</pubDate>
             <link>https://github.com/evanvonessen/coldkey</link>
@@ -23,18 +32,9 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/evanvonessen/coldkey/releases/download/v0.4.1/ColdKey-0.4.1.dmg" length="1691991" type="application/octet-stream" sparkle:edSignature="f9jkjO/nLkB0QRC7az0U03c81UpVc+9do9Rp598IwoSrFKf3wF677zjYUw35CPgiTv63ZvS5L7taWHdrL45fDQ=="/>
         </item>
-        <item>
-            <title>0.4.0</title>
-            <pubDate>Wed, 21 Oct 2026 02:36:47 -0700</pubDate>
-            <link>https://github.com/evanvonessen/coldkey</link>
-            <sparkle:version>5</sparkle:version>
-            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/evanvonessen/coldkey/releases/download/v0.4.0/ColdKey-0.4.0.dmg" length="1694660" type="application/octet-stream" sparkle:edSignature="ljAEqYKV9QGxwMZJhuON2iRLHtTRP3XOUX5xnskSa9MJd3FpcvdDNFGc8Jk6Wt+XvnAcvhgcd7/qGYWkGqUOCw=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: tZaoAwCvKrj4E7u1NiwjlFMCsgYHXsDSExidrDAMEGhOLbg9IOg+cFNWl4Fjy6H6/HVzYthzZU1s77mbaDLgAA==
+edSignature: oX/dCS8nmtrwMvgwrn41Wv5Vwwpbp63WZtauUXIhsbjP9pNJNRyJX52tspLC/mCEDKgzcyr/WW7YWn4/6jBhAg==
 length: 2435
 -->

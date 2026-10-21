@@ -27,7 +27,7 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
         self.functionRowStatus = status
         self.requestFunctionRowPermission = requestFunctionRowPermission
         self.openAccessibilitySettings = openAccessibilitySettings
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 470, height: status == nil ? 330 : 450),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 300),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         super.init(window: window)
         window.title = "ColdKey Settings"
@@ -65,11 +65,14 @@ final class LoginSettingsWindow: NSWindowController, NSWindowDelegate {
             stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
             stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
             stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 24),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: credit.topAnchor, constant: -20),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: credit.topAnchor, constant: -24),
             credit.centerXAnchor.constraint(equalTo: content.centerXAnchor),
             credit.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -18)
         ])
         refresh()
+        let controlsSize = stack.fittingSize
+        window.setContentSize(NSSize(width: max(300, controlsSize.width + 48),
+                                     height: 24 + controlsSize.height + 24 + credit.fittingSize.height + 18))
         window.center()
     }
 

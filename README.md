@@ -4,7 +4,7 @@
 
 Supports Apple Silicon and Intel Macs running macOS 13 or later. No developer tools are needed to install it.
 
-The download above is **0.4.2 (7)**, with a minimal Settings window, a changeable **⌘F12** function-row toggle, daily update checks, and bare **F1–F20** shortcuts.
+The download above is **0.4.3 (8)**, with a compact Settings window, a changeable **⌘F12** function-row toggle, daily update checks, and bare **F1–F20** shortcuts.
 
 A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later.
 
@@ -112,10 +112,10 @@ ColdKey uses pinned [Sparkle 2.10.0](https://sparkle-project.org/) for update ve
 After increasing the app version and build number in `scripts/build-app.sh`, build and notarize the DMG using the workflow above, then prepare the signed feed and versioned release asset:
 
 ```sh
-./scripts/prepare-update.sh 0.4.2
+./scripts/prepare-update.sh 0.4.3
 ```
 
-Commit the source, installer, checksum, approval receipts, and signed `updates/appcast.xml`. Publish a GitHub release tagged `v0.4.2` at that commit with `.build/update-v0.4.2/ColdKey-0.4.2.dmg` and its checksum as assets. Keep versioned assets unchanged once published. Publish the assets before advancing `main` to the new feed so the download already exists. Use the new version number in these paths for later releases. Re-run the preparation script after any change to the installer or appcast; editing the signed XML invalidates its signature.
+Commit the source, installer, checksum, approval receipts, and signed `updates/appcast.xml`. Publish a GitHub release tagged `v0.4.3` at that commit with `.build/update-v0.4.3/ColdKey-0.4.3.dmg` and its checksum as assets. Keep versioned assets unchanged once published. Publish the assets before advancing `main` to the new feed so the download already exists. Use the new version number in these paths for later releases. Re-run the preparation script after any change to the installer or appcast; editing the signed XML invalidates its signature.
 
 Version 0.2.0 and earlier need one manual installation of 0.3.0 or later to gain the updater. Future updates preserve your settings and shortcuts. Downloads and installation always require approval; automatic installation and system profiling are disabled. The checkbox controls only scheduled checks and its value persists across launches.
 

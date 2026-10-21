@@ -81,6 +81,8 @@ final class FunctionRowSettingsWindowTests: XCTestCase {
         XCTAssertEqual(creditFrame.midX, content.bounds.midX, accuracy: 0.5)
         XCTAssertEqual(creditFrame.minY, 18, accuracy: 0.5)
         XCTAssertEqual(credit.textColor, .secondaryLabelColor)
+        XCTAssertLessThan(content.bounds.width, 470)
+        XCTAssertLessThan(content.bounds.height, 300)
         for control in labels.map({ $0 as NSView }) + controls(NSButton.self, in: content) {
             let frame = content.convert(control.bounds, from: control)
             XCTAssertTrue(content.bounds.contains(frame))
