@@ -4,10 +4,12 @@
 
 Supports Apple Silicon and Intel Macs running macOS 13 or later. No developer tools are needed to install it.
 
+The download above is the notarized **0.1.0 (2)** release. Source **0.2.0 (3)** adds bare F1–F20 shortcuts; its updated installer is awaiting Apple notarization after the release credentials are refreshed.
+
 A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later.
 
 - Click the **⌘** menu bar icon → **Add Shortcut…**.
-- Choose an application and record Command, Option, and/or Control plus one key.
+- Choose an application and record **F1–F20 alone** (for example, **F1**), or Command, Option, and/or Control plus one key.
 - Enable **Hide app when it is already in front** to toggle between showing and hiding it.
 - Or enable **Hide even when not frontmost** to hide a visible app even while another app is in front. Press again to show it. This separate option is off by default and works on its own or with the original option.
 - Launch apps from the menu, or edit/remove bindings under **Manage Shortcuts**.
@@ -15,6 +17,8 @@ A tiny, native macOS menu bar app inspired by HotKey. Requires macOS 13 or later
 - Choose **Folder** in the editor to bind a directory. **Close folder window when it is already in front** closes the matching window only when Finder is active and that exact window is in front; otherwise it brings the window forward. **Close even when not frontmost** also closes a matching window behind another app or Finder window. With both off, the shortcut opens or raises the folder. With both on, the second option takes precedence. If several windows match, only the frontmost matching window is affected. These actions close windows, never delete folders or hide Finder.
 
 Shortcuts are saved locally and restored on launch. They use exclusive native hotkey registration to take precedence over ordinary foreground-app shortcuts. Holding a shortcut triggers it once until you release the key. Existing shortcuts pause while the editor is open so you can record them. Conflicts are shown and prevent saving an unavailable shortcut; saved shortcuts that cannot register at launch are marked unavailable. macOS-reserved shortcuts, secure input, and shortcuts owned by another global tool can prevent registration or delivery. ColdKey cannot override those protections; choose another combination or release the shortcut in the other tool.
+
+Function-key shortcuts work for both applications and folders, with or without the existing Command, Option, and Control modifiers. If pressing F1 changes brightness instead, enable **System Settings → Keyboard → Keyboard Shortcuts → Function Keys → Use F1, F2, etc. keys as standard function keys** to use the function row without holding Fn. You can still hold Fn for the hardware controls. See [Apple's function-key instructions](https://support.apple.com/102439). ColdKey does not change your keyboard settings automatically.
 
 Both hide options apply to the whole app, including all its windows. Hidden apps are shown and activated; apps that are not running are launched. Existing shortcuts keep their previous hide setting when updating.
 

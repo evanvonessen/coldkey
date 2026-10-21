@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import XCTest
 @testable import Coldkey
 
@@ -7,6 +8,101 @@ final class ShortcutEditorTests: XCTestCase {
     private func button(_ title: String, in view: NSView) -> NSButton? {
         if let button = view as? NSButton, button.title == title { return button }
         return view.subviews.lazy.compactMap { self.button(title, in: $0) }.first
+    }
+
+    private func recorder(in view: NSView) -> ShortcutRecorder? {
+        if let recorder = view as? ShortcutRecorder { return recorder }
+        return view.subviews.lazy.compactMap { self.recorder(in: $0) }.first
+    }
+
+    private func keyEvent(code: Int, modifiers: NSEvent.ModifierFlags = [], characters: String = "") throws -> NSEvent {
+        try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers,
+                                      timestamp: 0, windowNumber: 0, context: nil, characters: characters,
+                                      charactersIgnoringModifiers: characters, isARepeat: false, keyCode: UInt16(code)))
+    }
+
+    func testRecorderAcceptsEveryBareFunctionKeyWithOrWithoutFunctionFlag() throws {
+        _ = NSApplication.shared
+        let keys = [
+            (kVK_F1, "F1"), (kVK_F2, "F2"), (kVK_F3, "F3"), (kVK_F4, "F4"), (kVK_F5, "F5"),
+            (kVK_F6, "F6"), (kVK_F7, "F7"), (kVK_F8, "F8"), (kVK_F9, "F9"), (kVK_F10, "F10"),
+            (kVK_F11, "F11"), (kVK_F12, "F12"), (kVK_F13, "F13"), (kVK_F14, "F14"), (kVK_F15, "F15"),
+            (kVK_F16, "F16"), (kVK_F17, "F17"), (kVK_F18, "F18"), (kVK_F19, "F19"), (kVK_F20, "F20")
+        ]
+        for flags in [NSEvent.ModifierFlags(), .function] {
+            for (code, label) in keys {
+                let recorder = ShortcutRecorder(title: "Record Shortcut", target: nil, action: nil)
+                var recorded: (code: UInt32, modifiers: UInt32, label: String)?
+                recorder.onRecord = { recorded = ($0, $1, $2) }
+                // Function-key events expose private-use characters, not printable labels.
+                recorder.keyDown(with: try keyEvent(code: code, modifiers: flags, characters: "\u{F704}"))
+                let result = try XCTUnwrap(recorded, "\(label) must record with flags \(flags)")
+                XCTAssertEqual(result.code, UInt32(code))
+                XCTAssertEqual(result.modifiers, 0)
+                XCTAssertEqual(result.label, label)
+            }
+        }
+    }
+
+    func testRecorderKeepsModifiedFunctionKeysAndExistingChords() throws {
+        _ = NSApplication.shared
+        let cases: [(Int, NSEvent.ModifierFlags, UInt32, String, String)] = [
+            (kVK_F1, [.command, .function], UInt32(cmdKey), "\u{F704}", "F1"),
+            (kVK_F12, [.option, .function], UInt32(optionKey), "\u{F70F}", "F12"),
+            (kVK_F20, [.control, .function], UInt32(controlKey), "\u{F717}", "F20"),
+            (kVK_ANSI_A, [.command, .option, .control], UInt32(cmdKey | optionKey | controlKey), "a", "A")
+        ]
+        for (code, flags, modifiers, characters, label) in cases {
+            let recorder = ShortcutRecorder(title: "Record Shortcut", target: nil, action: nil)
+            var recorded: (code: UInt32, modifiers: UInt32, label: String)?
+            recorder.onRecord = { recorded = ($0, $1, $2) }
+            recorder.keyDown(with: try keyEvent(code: code, modifiers: flags, characters: characters))
+            let result = try XCTUnwrap(recorded)
+            XCTAssertEqual(result.code, UInt32(code))
+            XCTAssertEqual(result.modifiers, modifiers)
+            XCTAssertEqual(result.label, label)
+        }
+    }
+
+    func testRecorderRejectsBareOrdinaryKeysArrowsAndShiftedFunctionKeys() throws {
+        _ = NSApplication.shared
+        let recorder = ShortcutRecorder(title: "Record Shortcut", target: nil, action: nil)
+        var recordCount = 0
+        recorder.onRecord = { _, _, _ in recordCount += 1 }
+        let cases: [(Int, NSEvent.ModifierFlags)] = [
+            (kVK_ANSI_A, []), (kVK_LeftArrow, .function),
+            (kVK_F1, [.shift, .function]), (kVK_F1, [.shift, .command, .function])
+        ]
+        for (code, flags) in cases {
+            recorder.keyDown(with: try keyEvent(code: code, modifiers: flags, characters: "a"))
+        }
+        XCTAssertEqual(recordCount, 0)
+    }
+
+    func testEditorSavesRecordedBareFunctionKeyForApplicationsAndFolders() throws {
+        _ = NSApplication.shared
+        for kind in [Binding.TargetKind.application, .folder] {
+            let binding = Binding(appPath: kind == .application ? "/Applications/Safari.app" : "/tmp/Example.folder",
+                                  keyCode: UInt32(kVK_ANSI_A), modifiers: UInt32(cmdKey), keyLabel: "A",
+                                  hideOnRepeat: false, targetKind: kind)
+            let editor = ShortcutEditor(binding: binding)
+            defer { editor.close() }
+            let content = try XCTUnwrap(editor.window?.contentView)
+            let recorder = try XCTUnwrap(recorder(in: content))
+            recorder.keyDown(with: try keyEvent(code: kVK_F1, modifiers: .function, characters: "\u{F704}"))
+            XCTAssertEqual(recorder.title, "F1")
+            var saved: Binding?
+            editor.onSave = { saved = $0; return nil }
+            try XCTUnwrap(button("Save", in: content)).performClick(nil)
+            let result = try XCTUnwrap(saved)
+            XCTAssertEqual(result.id, binding.id)
+            XCTAssertEqual(result.appPath, binding.appPath)
+            XCTAssertEqual(result.targetKind, kind)
+            XCTAssertEqual(result.keyCode, UInt32(kVK_F1))
+            XCTAssertEqual(result.modifiers, 0)
+            XCTAssertEqual(result.keyLabel, "F1")
+            XCTAssertEqual(result.shortcut, "F1")
+        }
     }
 
     func testNewEditorDefaultsBothHideOptionsOffAndFitsControls() throws {

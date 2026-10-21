@@ -67,12 +67,9 @@ final class HotKeyManager {
         unregister()
         guard handlerStatus == noErr else { return ["ColdKey could not listen for shortcuts (\(handlerStatus)). Restart the app and try again."] }
         var failures: [String] = []
-        let allowedModifiers = UInt32(cmdKey | optionKey | controlKey)
-        let modifierKeys: Set<UInt32> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
         for binding in bindings {
-            guard binding.modifiers != 0, binding.modifiers & ~allowedModifiers == 0,
-                  binding.keyCode <= 127, !modifierKeys.contains(binding.keyCode) else {
-                failures.append("\(binding.name): choose Command, Option, or Control with one non-modifier key.")
+            guard ShortcutKey.isValid(keyCode: binding.keyCode, modifiers: binding.modifiers) else {
+                failures.append("\(binding.name): choose F1–F20 alone, or Command, Option, or Control with one non-modifier key.")
                 continue
             }
             guard Self.nextIdentifier < UInt32.max else {

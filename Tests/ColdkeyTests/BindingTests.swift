@@ -25,6 +25,19 @@ final class BindingTests: XCTestCase {
         XCTAssertTrue(BindingStore(defaults: defaults).bindings.isEmpty)
     }
 
+    func testBareAndModifiedFunctionKeysSurviveReloadTogether() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let bare = Binding(appPath: "/Applications/Safari.app", keyCode: UInt32(kVK_F1), modifiers: 0, keyLabel: "F1", hideOnRepeat: true)
+        var modified = bare; modified.id = UUID(); modified.modifiers = UInt32(cmdKey | optionKey)
+        XCTAssertFalse(bare.conflicts(with: modified))
+        try BindingStore(defaults: defaults).save([bare, modified])
+        let restored = BindingStore(defaults: defaults).bindings
+        XCTAssertEqual(restored, [bare, modified])
+        XCTAssertEqual(restored.map(\.shortcut), ["F1", "⌥⌘F1"])
+    }
+
     func testOlderSavedShortcutsKeepTheirBehavior() throws {
         let suite = "ColdkeyTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

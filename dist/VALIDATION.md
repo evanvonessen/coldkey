@@ -1,5 +1,20 @@
 # Packaged ColdKey validation
 
+## Source 0.2.0 (3): function-key shortcuts
+
+Validated on October 21, 2026. Bare F1–F20 now work for applications and folders alongside the existing modifier shortcuts. The README download remains the notarized **0.1.0 (2)** installer below; the new installer has not been published because Apple rejected the saved notarization credentials with HTTP 401.
+
+- PASS: `swift test` — 59 tests, zero failures or skips, including recording all F1–F20 with and without the function event flag, readable labels, saving for applications and folders, persistence alongside modified shortcuts, conflicts, repeat suppression, and native bare F1/F20 exclusive registration and release.
+- PASS: `python3 Tests/Packaging/test_notarization.py` — five packaging workflow tests.
+- PASS: universal release build; the packaged Intel and Apple Silicon executable slices both declare macOS 13.0 as their minimum.
+- PASS: Developer ID signatures on the candidate app and DMG, read-only DMG verification/mounting, extracted app verification, preserved bundle identifier, version 0.2.0 (3), and checksum verification.
+- PASS: the extracted candidate app stayed running during its startup check and used menu-bar accessory activation policy. Only the isolated test instance was quit.
+- PASS: shell syntax, entitlement plist validation, and `git diff --check`.
+- PENDING: renewed notarization credentials, Apple acceptance and stapled tickets for the new app and DMG, distribution checks, and replacement of the README download. The signed candidate is kept separately at `.build/ColdKey-0.2.0.dmg`; the old installer and its acceptance receipts are unchanged.
+- NOT RUN: physical function-key delivery and suppression in another foreground app, Intel hardware/macOS 13 runtime testing, or an installation from a quarantined download. Native registration and AppKit recording/save paths were tested separately without keyboard injection. This Mac currently reports Gatekeeper assessments enabled.
+
+## Published 0.1.0 (2)
+
 Validated on October 13, 2026. Release **0.1.0 (2)** is displayed and packaged as **ColdKey**. Its bundle identifier remains `com.evanvonessen.coldkey` to preserve existing shortcuts and settings. The original HotKey icon and shortcut behavior are retained.
 
 - PASS: `swift test` — 51 tests, zero failures or skips, including native Carbon registration and AppKit control checks.

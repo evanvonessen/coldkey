@@ -102,6 +102,52 @@ final class HotKeyManagerTests: XCTestCase {
         XCTAssertTrue(manager.registeredIDs.isEmpty)
     }
 
+    func testBareFunctionKeysRegisterExclusivelyForAppsAndFolders() throws {
+        for kind in [Binding.TargetKind.application, .folder] {
+            let backend = MockHotKeys()
+            let manager = HotKeyManager(backend: backend, installHandler: false)
+            let shortcuts = ShortcutKey.functionKeyLabels.keys.sorted().map { binding(code: $0, modifiers: 0, kind: kind) }
+            XCTAssertEqual(shortcuts.count, 20)
+            XCTAssertTrue(manager.register(shortcuts).isEmpty)
+            XCTAssertEqual(manager.registeredIDs, Set(shortcuts.map(\.id)))
+            XCTAssertEqual(backend.requests.map(\.code), shortcuts.map(\.keyCode))
+            XCTAssertTrue(backend.requests.allSatisfy { $0.modifiers == 0 && $0.options == OptionBits(kEventHotKeyExclusive) })
+            var actions: [UUID] = []; manager.onPress = { actions.append($0) }
+            let request = try XCTUnwrap(backend.requests.first)
+            manager.handle(request.id, kind: down)
+            manager.handle(request.id, kind: down)
+            XCTAssertEqual(actions, [shortcuts[0].id])
+            manager.handle(request.id, kind: up)
+            manager.handle(request.id, kind: down)
+            XCTAssertEqual(actions, [shortcuts[0].id, shortcuts[0].id])
+            manager.unregister()
+            XCTAssertEqual(backend.released.count, 20)
+        }
+    }
+
+    func testBareFunctionKeyConflictLeavesExistingBindingsUnchanged() throws {
+        let suite = "ColdkeyTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = BindingStore(defaults: defaults)
+        let original = binding()
+        try store.save([original])
+        let backend = MockHotKeys(); backend.failingCodes = [UInt32(kVK_F1)]
+        let manager = HotKeyManager(backend: backend, installHandler: false)
+        let delegate = AppDelegate(store: store, hotKeys: manager)
+        var shortcut = binding(code: UInt32(kVK_F1), modifiers: 0)
+        shortcut.keyLabel = "F1"
+        XCTAssertNotNil(delegate.saveBinding(shortcut))
+        XCTAssertEqual(BindingStore(defaults: defaults).bindings, [original])
+        XCTAssertTrue(manager.registeredIDs.isEmpty)
+        backend.failingCodes = []
+        XCTAssertNil(delegate.saveBinding(shortcut))
+        XCTAssertEqual(BindingStore(defaults: defaults).bindings, [original, shortcut])
+        var duplicate = shortcut; duplicate.id = UUID(); duplicate.targetKind = .folder
+        XCTAssertNotNil(delegate.saveBinding(duplicate))
+        XCTAssertEqual(manager.registeredIDs, [original.id, shortcut.id])
+    }
+
     func testFailedSavePreservesStoredBindingsAndSuccessKeepsReservation() throws {
         let suite = "ColdkeyTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -146,6 +192,21 @@ final class HotKeyManagerTests: XCTestCase {
         let retry = backend.register(keyCode: keyCode, modifiers: modifiers, id: EventHotKeyID(signature: 0x54455354, id: 3), options: OptionBits(kEventHotKeyExclusive))
         if let retryReference = retry.1 { backend.unregister(retryReference) }
         XCTAssertEqual(retry.0, noErr)
+    }
+
+    func testNativeBareFunctionKeyExclusiveConflictAndRelease() throws {
+        let backend = CarbonHotKeyRegistration()
+        for code in [kVK_F1, kVK_F20] {
+            let first = backend.register(keyCode: UInt32(code), modifiers: 0, id: EventHotKeyID(signature: 0x54455354, id: 1), options: OptionBits(kEventHotKeyExclusive))
+            guard first.0 == noErr, let reference = first.1 else { throw XCTSkip("Bare function key \(code) unavailable: \(first.0)") }
+            let duplicate = backend.register(keyCode: UInt32(code), modifiers: 0, id: EventHotKeyID(signature: 0x54455354, id: 2), options: OptionBits(kEventHotKeyExclusive))
+            if let extra = duplicate.1 { backend.unregister(extra) }
+            XCTAssertNotEqual(duplicate.0, noErr)
+            backend.unregister(reference)
+            let retry = backend.register(keyCode: UInt32(code), modifiers: 0, id: EventHotKeyID(signature: 0x54455354, id: 3), options: OptionBits(kEventHotKeyExclusive))
+            if let retryReference = retry.1 { backend.unregister(retryReference) }
+            XCTAssertEqual(retry.0, noErr)
+        }
     }
 
     func testInstalledCarbonHandlerConsumesOnlyItsPressAndReleaseEvents() throws {

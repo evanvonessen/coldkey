@@ -12,14 +12,14 @@ final class ShortcutRecorder: NSButton {
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { window?.makeFirstResponder(nil); return }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard !flags.contains(.shift), flags.intersection([.command, .option, .control]).isEmpty == false else {
-            NSSound.beep(); return
-        }
         let modifiers = (flags.contains(.command) ? UInt32(cmdKey) : 0) |
             (flags.contains(.option) ? UInt32(optionKey) : 0) |
             (flags.contains(.control) ? UInt32(controlKey) : 0)
+        guard !flags.contains(.shift), ShortcutKey.isValid(keyCode: UInt32(event.keyCode), modifiers: modifiers) else {
+            NSSound.beep(); return
+        }
         let special: [UInt16: String] = [36: "↩", 48: "⇥", 49: "Space", 51: "⌫", 117: "⌦", 123: "←", 124: "→", 125: "↓", 126: "↑", 115: "Home", 119: "End", 116: "Page Up", 121: "Page Down"]
-        let label = special[event.keyCode] ?? event.charactersIgnoringModifiers?.uppercased() ?? "Key \(event.keyCode)"
+        let label = ShortcutKey.functionKeyLabels[UInt32(event.keyCode)] ?? special[event.keyCode] ?? event.charactersIgnoringModifiers?.uppercased() ?? "Key \(event.keyCode)"
         onRecord?(UInt32(event.keyCode), modifiers, label)
         window?.makeFirstResponder(nil)
     }
@@ -69,7 +69,8 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
             self.draft.keyCode = code; self.draft.modifiers = modifiers; self.draft.keyLabel = label
             self.recorder.title = self.draft.shortcut
         }
-        let hint = NSTextField(wrappingLabelWithString: "Use ⌘ Command, ⌥ Option or ⌃ Control with one key.")
+        let hint = NSTextField(wrappingLabelWithString: "Use F1–F20 alone, or ⌘ Command, ⌥ Option or ⌃ Control with one key.")
+        recorder.toolTip = "If a function key changes brightness or volume, enable standard function keys in System Settings → Keyboard → Keyboard Shortcuts → Function Keys."
         hint.font = .systemFont(ofSize: 11); hint.textColor = .secondaryLabelColor
         message.font = .systemFont(ofSize: 11); message.textColor = .systemRed
         let save = NSButton(title: "Save", target: self, action: #selector(saveBinding)); save.bezelStyle = .rounded; save.keyEquivalent = "\r"
@@ -121,7 +122,8 @@ final class ShortcutEditor: NSWindowController, NSWindowDelegate {
         }
     }
     @objc private func saveBinding() {
-        guard !draft.appPath.isEmpty, draft.modifiers != 0 else { message.stringValue = "Choose an application or folder and record a shortcut."; return }
+        guard !draft.appPath.isEmpty, !draft.keyLabel.isEmpty,
+              ShortcutKey.isValid(keyCode: draft.keyCode, modifiers: draft.modifiers) else { message.stringValue = "Choose an application or folder and record a shortcut."; return }
         draft.hideOnRepeat = hide.state == .on
         draft.hideWhenNotFrontmost = hideInBackground.state == .on
         draft.closeFolderOnRepeat = closeFolder.state == .on
