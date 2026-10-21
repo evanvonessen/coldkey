@@ -48,7 +48,7 @@ final class UpdateSettingsTests: XCTestCase {
         XCTAssertEqual(updates.changes, 2)
     }
 
-    func testUnavailableUpdaterIsExplainedAndCreditIsSmallGrayAndCentered() throws {
+    func testUnavailableUpdaterIsDisabledAndOnlyCreditIsShown() throws {
         _ = NSApplication.shared
         let updates = FakeUpdateSettings()
         updates.isAvailable = false
@@ -60,7 +60,7 @@ final class UpdateSettingsTests: XCTestCase {
         let checkbox = try XCTUnwrap(controls(NSButton.self, in: content).first { $0.title == "Check for updates" })
         XCTAssertFalse(checkbox.isEnabled)
         let labels = controls(NSTextField.self, in: content)
-        XCTAssertTrue(labels.contains { $0.stringValue == updates.message })
+        XCTAssertEqual(labels.map(\.stringValue), ["Evan Von Essen"])
         let credit = try XCTUnwrap(labels.first { $0.stringValue == "Evan Von Essen" })
         XCTAssertEqual(credit.alignment, .center)
         XCTAssertEqual(credit.textColor, .secondaryLabelColor)

@@ -202,7 +202,7 @@ final class LoginSettingsWindowTests: XCTestCase {
         let checkbox = try XCTUnwrap(controls(NSButton.self, in: content).first { $0.title == "Start at login" })
         checkbox.performClick(nil)
         XCTAssertEqual(checkbox.state, .mixed)
-        XCTAssertTrue(controls(NSTextField.self, in: content).contains { $0.stringValue.contains("Waiting for approval") })
+        XCTAssertEqual(controls(NSTextField.self, in: content).map(\.stringValue), ["Evan Von Essen"])
         XCTAssertEqual(service.settingsOpened, 0)
         try XCTUnwrap(controls(NSButton.self, in: content).first { $0.title == "Open Login Items…" }).performClick(nil)
         XCTAssertEqual(service.settingsOpened, 1)
@@ -211,7 +211,7 @@ final class LoginSettingsWindowTests: XCTestCase {
         XCTAssertEqual(service.removals, 1)
     }
 
-    func testReopeningSettingsRefreshesExternalChangesAndErrorsStayTruthful() throws {
+    func testReopeningSettingsRefreshesExternalChangesAndFailedChangesKeepActualState() throws {
         _ = NSApplication.shared
         let service = FakeLoginItem()
         let settings = LoginSettingsWindow(loginItem: LoginItemController(service: service, installationProblem: { nil }))
@@ -224,10 +224,10 @@ final class LoginSettingsWindowTests: XCTestCase {
         service.unregisterError = NSError(domain: "LoginItemTest", code: 1, userInfo: [NSLocalizedDescriptionKey: "Operation denied."])
         checkbox.performClick(nil)
         XCTAssertEqual(checkbox.state, .on)
-        XCTAssertTrue(controls(NSTextField.self, in: content).contains { $0.stringValue.contains("Operation denied.") })
+        XCTAssertEqual(controls(NSTextField.self, in: content).map(\.stringValue), ["Evan Von Essen"])
     }
 
-    func testBuildCopyExplainsDisabledCheckboxAndFitsLongStatus() throws {
+    func testBuildCopyDisablesCheckboxWithoutExplanatoryLabels() throws {
         _ = NSApplication.shared
         let service = FakeLoginItem()
         let problem = try XCTUnwrap(LoginItemInstallation.problem(bundleURL: URL(fileURLWithPath: "/tmp/.build/ColdKey.app"), bundleIdentifier: "com.evanvonessen.coldkey"))
@@ -239,7 +239,7 @@ final class LoginSettingsWindowTests: XCTestCase {
         XCTAssertEqual(checkbox.state, .off)
         XCTAssertEqual(service.registrations, 0)
         let label = try XCTUnwrap(controls(NSTextField.self, in: content).first)
-        XCTAssertEqual(label.stringValue, problem)
+        XCTAssertEqual(label.stringValue, "Evan Von Essen")
         content.layoutSubtreeIfNeeded()
         XCTAssertTrue(content.bounds.contains(content.convert(label.bounds, from: label)))
         XCTAssertGreaterThanOrEqual(label.frame.height, label.fittingSize.height)

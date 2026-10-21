@@ -1,24 +1,18 @@
 # Packaged ColdKey validation
 
-Validated on October 21, 2026. Release **0.4.0 (5)** adds **Toggle Function Row**, initially **⌘F12**, with a changeable shortcut and Accessibility controls. It recognizes standard F12 and icon-mode Volume Up. The chosen chord is reserved while ColdKey runs, including in the editor; rebinding acquires its replacement before releasing the old chord. Existing app/folder shortcuts, daily approval-only updates, Settings checkbox, and centered gray credit remain. Bundle identifier: `com.evanvonessen.coldkey`.
+Validated on October 21, 2026. Release **0.4.1 (6)** removes explanatory paragraphs and the update tooltip from Settings. The existing buttons, checkbox labels, behavior, window dimensions, and centered gray **Evan Von Essen** credit are preserved. Bundle identifier: `com.evanvonessen.coldkey`.
 
-- PASS: `swift test` — 105 tests, zero failures or skips. Covers standard/media event parsing, supported aliases, both representations of key-up after a mode change, modifier release, repeat/duplicate suppression, early Carbon release, unrelated-event forwarding, default migration, pathless action editing, recording the reserved chord, rebind reservation ordering, failed-save preservation, permission UI, and existing app/folder/update behavior.
-- PASS: `Tests/FunctionRow/validate_mode.sh` — actual public IOKit mode changes and saved global preference verified in both directions on this Mac. Native ⌘F12 exclusive registration and rejection of a duplicate registration passed in each mode. The exact original runtime mode and saved preference were restored afterward. No keystrokes were injected.
-- PASS: `python3 Tests/Packaging/test_notarization.py` — five release checkpoint tests, including preservation of the old installer until both Apple approvals and detection of changed inputs.
-- PASS: five native Sparkle scenarios using disposable copies of the final signed app: decline without downloading; approve and install from the exact final DMG; reject a tampered feed; reject an invalid archive signature; and report an already-current app without downloading. Manual checks with scheduled checks disabled and preference persistence also pass. Installed copies are preserved.
-- PASS: universal release executable (`arm64` and `x86_64`), both declaring macOS 13.0 as minimum. Final notarized app startup remained running with accessory activation policy.
-- PASS: strict deep signature verification across architectures, notarization ticket validation, and Gatekeeper assessment as **Notarized Developer ID**. Pinned Sparkle 2.10.0 and its embedded helpers are signed with the same Developer ID. Optional sandbox XPC services and development headers remain omitted.
-- PASS: AppKit Settings layout tests cover the Accessibility controls and the small, gray, centered bottom credit. Permission is requested only by an explicit button or invocation of the unavailable shortcut; launching does not request it.
-- PASS: Apple accepted app submission `77876286-8b63-43ca-aec9-5b95f275a771`; [app receipt](ColdKey.dmg.app-notarization.json).
-- PASS: Apple accepted DMG submission `71478da5-4225-4aff-bf00-c9b7054a6c8c`; [DMG receipt](ColdKey.dmg.notarization.json). Both approval tickets are stapled and validated. The release script submitted each archive once and resumed the saved submissions.
-- PASS: signed appcast and archive verification using ColdKey's pinned Ed25519 public key. Private signing credentials remain in Keychain.
-- PASS: packaged version 0.4.0 (5), daily checks (86400 seconds), disabled automatic downloads/installation and system profiling, disabled release-note web views, and required feed/archive signatures.
-- PASS: final DMG checksum, read-only image verification and mounting, shell syntax, and `git diff --check`.
-- NOT RUN: physical ⌘F12 presses in foreground apps, trusted event-tap delivery and Carbon ordering, or an actual Accessibility grant/revocation. The validation process lacks Accessibility permission. Synthetic standard/media events and native mode changes are tested separately; they do not establish physical-key suppression. Enable ColdKey in **Privacy & Security → Accessibility** to use and check the global shortcut. macOS protections and another tool's earlier event filter can still prevent delivery.
-- NOT RUN: Intel hardware, macOS 13 runtime, login/reboot, quarantined first installation, or an actual 24-hour update wait. Daily scheduling is verified through Sparkle's configured interval.
+- PASS: `swift test` — 105 tests total, 104 passed, one skipped, zero failures. Existing Settings tests verify the original controls, callbacks, checkbox state, layout, and the credit as the only text field. One native bare-F1 reservation test skipped because the chord was already reserved (`-9878`); it did not release another app's shortcut.
+- PASS: `python3 Tests/Packaging/test_notarization.py` — five release checkpoint tests.
+- PASS: signed app startup and accessory activation policy. The exact approved archive was used for the packaged app.
+- PASS: universal executable (`arm64` and `x86_64`), both declaring macOS 13.0 as minimum.
+- PASS: strict deep signature verification across architectures, app and DMG ticket validation, read-only image verification and mounting, and Gatekeeper assessment as **Notarized Developer ID**.
+- PASS: Apple accepted app submission `fd9d43bd-2a53-4a2d-b7e7-2c954609f8a0`; [app receipt](ColdKey.dmg.app-notarization.json).
+- PASS: Apple accepted DMG submission `6ffdbdaa-9c67-44af-b6cb-cf52e09120f4`; [DMG receipt](ColdKey.dmg.notarization.json). Both approval tickets are stapled and validated. Each archive was submitted once.
+- PASS: signed update feed prepared and verified with the existing ColdKey Ed25519 key; versioned release asset matches the final DMG. Private signing credentials remain in Keychain.
+- PASS: checksum verification, shell syntax, and `git diff --check`.
+- NOT RUN for this Settings-only release: physical shortcut delivery, native mode switching, update installation, an actual Accessibility grant/revocation, Intel hardware, macOS 13 runtime, login/reboot, quarantined first installation, or a 24-hour update wait. The mode controller, shortcut filter, updater, and packaging scripts are unchanged. Native mode/registration checks and five signed-update scenarios were recorded for [0.4.0](https://github.com/evanvonessen/coldkey/blob/v0.4.0/dist/VALIDATION.md).
 
-The compressed installer is **1,694,660 bytes** (about 1.7 MB). The function-row action uses public IOKit APIs and one event-driven session keyboard filter in the existing app process, with no custom polling or additional background service. F3–F6 are excluded only for the toggle action because their icon mappings vary by keyboard; existing app/folder shortcuts retain F1–F20 support.
+The compressed installer is **1,691,991 bytes**. Sparkle 2.10.0 remains the sole runtime dependency. Its license and bundled notices are in `Contents/Resources/Sparkle-LICENSE.txt`. The installer background comes from dmgbuild 1.6.7, with its MIT license in `.licenses/dmgbuild.txt`. Python packaging tools are build-time only.
 
-Sparkle's license and bundled notices are in `Contents/Resources/Sparkle-LICENSE.txt`. The installer background comes from dmgbuild 1.6.7; its MIT license is in `.licenses/dmgbuild.txt`. Python packaging tools are build-time only.
-
-Installer SHA-256: `861d68616c71361f93b426b47da86a02200a87a3e172e1fd2233eb145aad83fe`.
+Installer SHA-256: `57814182ae199704ba4733b48422ff388274230f78e85156a300bea28ea9697f`.

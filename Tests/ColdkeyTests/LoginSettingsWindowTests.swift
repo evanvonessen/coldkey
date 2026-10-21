@@ -28,15 +28,13 @@ final class FunctionRowSettingsWindowTests: XCTestCase {
         XCTAssertEqual(settingsOpened, 0)
         settings.refresh()
         XCTAssertEqual(requests, 0)
-        XCTAssertTrue(controls(NSTextField.self, in: content).contains {
-            $0.stringValue.contains("Allow Accessibility") && $0.stringValue.contains("both row modes")
-        })
+        XCTAssertEqual(controls(NSTextField.self, in: content).map(\.stringValue), ["Evan Von Essen"])
         allow.performClick(nil)
         XCTAssertEqual(requests, 1)
         XCTAssertEqual(settingsOpened, 0)
         XCTAssertEqual(refreshes, 1)
         XCTAssertEqual(allow.title, "Open Accessibility Settings…")
-        XCTAssertTrue(controls(NSTextField.self, in: content).contains { $0.stringValue.contains("shortcut is inactive") })
+        XCTAssertEqual(controls(NSTextField.self, in: content).map(\.stringValue), ["Evan Von Essen"])
     }
 
     func testTrustedInactiveShortcutOpensSettingsAndPermissionCallbackCanActivateIt() throws {
@@ -56,7 +54,7 @@ final class FunctionRowSettingsWindowTests: XCTestCase {
         button.performClick(nil)
         XCTAssertEqual(settingsOpened, 1)
         XCTAssertEqual(requests, 0)
-        XCTAssertTrue(controls(NSTextField.self, in: content).contains { $0.stringValue.contains("shortcut is active") })
+        XCTAssertEqual(controls(NSTextField.self, in: content).map(\.stringValue), ["Evan Von Essen"])
     }
 
     func testReopeningSettingsRefreshesPermissionAndControlsFitAboveCenteredCredit() throws {
@@ -75,7 +73,7 @@ final class FunctionRowSettingsWindowTests: XCTestCase {
         settings.windowDidBecomeKey(Notification(name: NSWindow.didBecomeKeyNotification))
         XCTAssertEqual(refreshes, 1)
         XCTAssertEqual(permissionButton.title, "Open Accessibility Settings…")
-        XCTAssertTrue(controls(NSTextField.self, in: content).contains { $0.stringValue.contains("shortcut is active") })
+        XCTAssertEqual(controls(NSTextField.self, in: content).map(\.stringValue), ["Evan Von Essen"])
         content.layoutSubtreeIfNeeded()
         let labels = controls(NSTextField.self, in: content)
         let credit = try XCTUnwrap(labels.first { $0.stringValue == "Evan Von Essen" })

@@ -6,6 +6,15 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>ColdKey</title>
         <item>
+            <title>0.4.1</title>
+            <pubDate>Wed, 21 Oct 2026 03:31:24 -0700</pubDate>
+            <link>https://github.com/evanvonessen/coldkey</link>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/evanvonessen/coldkey/releases/download/v0.4.1/ColdKey-0.4.1.dmg" length="1691991" type="application/octet-stream" sparkle:edSignature="f9jkjO/nLkB0QRC7az0U03c81UpVc+9do9Rp598IwoSrFKf3wF677zjYUw35CPgiTv63ZvS5L7taWHdrL45fDQ=="/>
+        </item>
+        <item>
             <title>0.4.0</title>
             <pubDate>Wed, 21 Oct 2026 02:36:47 -0700</pubDate>
             <link>https://github.com/evanvonessen/coldkey</link>
@@ -26,6 +35,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: yPgt48hSNZzf1Hhg2qCczN8sHlwxf03Zea7rEiKlUAuRwkPfeVzyY0lZtrhJHOculVT4/Ntm1xtw73rZTOTIBw==
-length: 1767
+edSignature: OCmpFTEDegeuefSLqIfVHmKJxCoP73RSEoUMPu5gMhdR1qSr+g+kuw7zsQuGNxIF/CCtU4fS1bkUfh/8yq4QCg==
+length: 2435
 -->
